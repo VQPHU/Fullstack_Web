@@ -3,6 +3,6 @@ export interface User {
     name: string;
     email: string;
     avatar: string;
-    role: "admin" | "user" | "delieryman";
+    role: "admin" | "user" | "deliveryman";
     createdAt: string;
 }

@@ -1,6 +1,8 @@
-import { error } from 'console';
 import React, { useEffect, useState } from 'react'
-import { maxSize, set } from 'zod';
+import { useDropzone } from "react-dropzone"
+import { Card, CardContent } from './card';
+import { Upload, X } from 'lucide-react';
+import { Button } from './button';
 
 interface ImageUpLoadProps {
     value: string;
@@ -30,7 +32,7 @@ const ImageUpLoad = ({ value, onChange, disabled }: ImageUpLoadProps) => {
         accept: {
             "image/*": [".jpeg", ".jpg", ".png", ".webp"],
         },
-        maxSize: 4000000,
+        maxSize: 1000000,
         maxFiles: 1,
         disabled,
         onDrop: async (acceptedFiles) => {
@@ -45,7 +47,55 @@ const ImageUpLoad = ({ value, onChange, disabled }: ImageUpLoadProps) => {
             }
         },
     });
-    return 
+
+    const handleRemove = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onChange("");
+        setPreview(null);
+    }
+    return (
+        <Card className='border-dashed overflow-hidden'>
+            <CardContent className='p-0'>
+                <div {...getRootProps({
+                    className:
+                        "flex flex-col items-center justify-center p-6 cursor-pointer"
+                })}
+                >
+                    <input {...getInputProps()} />
+                    {preview ? (
+                        <div className='w-full relative'>
+                            <img
+                                src={preview}
+                                alt='Preview'
+                                className='w-full h-[200px] object-cover rounded-md'
+                            />
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className='absolute top-2 right-2'
+                                onClick={handleRemove}
+                                disabled={disabled}
+                            >
+                                <X size={16} />
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className='flex flex-col items-center justify-center h-[200px] w-full border border-dashed border-muted-foreground/50 rounded-md'>
+                            <Upload className='h-10 w-10 text-muted-foreground mb-2' />
+                            <p className='text-sm text-muted-foreground mb-1'>
+                                Drag &amp; drop or click to upload
+                            </p>
+                            <p className='text-xs text-muted-foreground/70'>
+                                Image (max 10MB)
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+
 };
 
 export default ImageUpLoad;

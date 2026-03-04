@@ -18,6 +18,8 @@ import { userSchema } from '@/lib/validation';
 import z, { set, tuple } from 'zod';
 import { useForm } from 'react-hook-form';
 import ImageUpLoad from '@/components/ui/image.upload';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
 
 type FormData = z.infer<typeof userSchema>;
 
@@ -129,10 +131,42 @@ const UsersPage = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleDelete = () => { };
+  const handleDelete = (user: User) => {
+    setSelectedUser(user);
+    setIsDeleteModalOpen(true);
+  };
 
-  const handleUpdateUser = async () => {
+  const handleUpdateUser = async (data: FormData) => {
+    if (!selectedUser) return;
+    setFormLoading(true);
+    try {
+      await axiosPrivate.put(`/users/${selectedUser._id}`, data);
+      toast("User updated successfully");
+      setIsEditModalOpen(false);
+      fetchUsers();
+    } catch (error) {
+      console.log("Failed to update user", error);
+      toast("Failed to update user");
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    try {
+      await axiosPrivate.delete(`/users/${selectedUser._id}`);
+      toast("User deteled successfully");
+      setIsDeleteModalOpen(false);
+      fetchUsers();
+    } catch (error) {
+      console.log('Failed to delete user', error);
+      toast("Failed to delete user");
+    }
+  };
+  const handleView = (user: User) => {
+    setSelectedUser(user);
+    setIsViewModalOpen(true);
   };
 
   const filteredUsers = users.filter((user) => {
@@ -276,7 +310,7 @@ const UsersPage = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        // onClick={() => handleView(user)}
+                        onClick={() => handleView(user)}
                         title="View user details"
                       >
                         <Eye className='h-4 w-4' />
@@ -294,7 +328,7 @@ const UsersPage = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            // onClick={()=> handleDelete(user)}
+                            onClick={() => handleDelete(user)}
                             className='text-red-600 hover:text-red-700'
                             title='Delete user'
                           >
@@ -564,6 +598,7 @@ const UsersPage = () => {
                       <Input
                         {...field}
                         disabled={formLoading}
+                        placeholder='leave empty to keep current'
                         className='border-gray-300 rounded-lg focus:ring-2 focus: ring-indigo-500 focus:border-indigo-500  transition-all duration-200'
                       />
                     </FormControl>
@@ -672,6 +707,87 @@ const UsersPage = () => {
         </DialogContent>
       </Dialog>
       {/* Delete user Modal */}
+      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete {" "}
+              <span className='font-semibold'>{selectedUser?.name}</span> 's account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              className='bg-red-600 hover:bg-red-700'
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* View User Dialog */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>
+              View complete user information
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className='space-y-6'>
+              <div className='flex items-center gap-4'>
+                <div className='h-20 w-20 rounded-full bg-blue-100 flex
+                items-center justify-center text-blue-600 font-semibold shadows-sm
+                overflow-hidden'>
+                  {selectedUser.avatar ? (
+                    <img
+                      src={selectedUser.avatar}
+                      alt={selectedUser.name}
+                      className='h-full w-full object-cover'
+                    />
+                  ) : (
+                    <span className='text-2xl'>
+                      {selectedUser.name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <h3 className='text-2xl font-bold text-gray-900'>
+                    {selectedUser.name}
+                  </h3>
+                  <p className='text-gray-600'>{selectedUser.email}</p>
+                  <Badge
+                    className={cn(
+                      "capitalize mt-2",
+                      getRoleColor(selectedUser.role)
+                    )}
+                  >
+                    {selectedUser.role}
+                  </Badge>
+                </div>
+              </div>
+              <div className='flex flex-col gap-2'>
+                <div>
+                  <Label className='text-sm font-medium text-gray-600'>
+                    User ID
+                  </Label>
+                  <p className='text-lg font-semibold'>{selectedUser._id}</p>
+                </div>
+                <div>
+                  <Label className='text-sm font-medium text-gray-600'>
+                    Created At
+                  </Label>
+                  <p>{new Date(selectedUser.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

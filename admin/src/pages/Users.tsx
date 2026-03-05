@@ -97,6 +97,9 @@ const UsersPage = () => {
     } finally {
       setRefreshing(false);
       setLoading(false);
+      //       setTimeout(() => {
+      //   setRefreshing(false);
+      // }, 2000);
     }
   };
 

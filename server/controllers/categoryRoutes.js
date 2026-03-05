@@ -81,7 +81,7 @@ const createCategory = asyncHandler(async (req, res) => {
     let imageUrl = "";
     if (image) {
         const result = await cloudinary.uploader.upload(image, {
-            folder: "admin-dashboard/categories",
+            folder: "babymartyt/categories",
         });
     }
 
@@ -121,7 +121,7 @@ const updateCategory = asyncHandler(async (req, res) => {
         if (image !== undefined) {
             if (image) {
                 const result = await cloudinary.uploader.update(image, {
-                    folder: "admin-dashboard/categories",
+                    folder: "babymartyt/categories",
                 });
                 category.image = result.secure_url;
             } else {

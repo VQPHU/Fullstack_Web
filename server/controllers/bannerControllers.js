@@ -38,7 +38,7 @@ const createBanner = asyncHandler(async (req, res) => {
     let imageUrl = "";
     if (image) {
         const result = await cloudinary.uploader.upload(image, {
-            folder: "admin-dashboard/banners",
+            folder: "babymartyt/banners",
         });
         imageUrl = result.secure_url;
     }
@@ -77,7 +77,7 @@ const updateBanner = asyncHandler(async (req, res) => {
             if (image !== undefined) {
                 if (image) {
                     const result = await cloudinary.uploader.upload(image, {
-                        folder: "admin-dashboard/banners",
+                        folder: "babymartyt/banners",
                     });
                     brand.image = result.secure_url;
                 } else {

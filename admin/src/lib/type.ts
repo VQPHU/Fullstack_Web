@@ -5,4 +5,11 @@ export interface User {
     avatar: string;
     role: "admin" | "user" | "deliveryman";
     createdAt: string;
-}
+};
+
+export type Brand = {
+    _id: string;
+    name: string;
+    image?: string; // Image is optional 
+    createdAt: string;
+};

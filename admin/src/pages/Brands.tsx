@@ -1,3 +1,4 @@
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -9,7 +10,7 @@ import { Brand } from '@/lib/type';
 import { brandSchema } from '@/lib/validation';
 import useAuthStore from '@/store/useAuthStore';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Edit, ImageUpIcon, Loader2, Plus, RefreshCw, Trash } from 'lucide-react';
+import { Edit, Loader2, Plus, RefreshCw, Trash } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -37,6 +38,14 @@ const Brands = () => {
       image: "", // Default to empty string for optional image 
     },
   });
+
+  const formEdit = useForm<FormData>({
+    resolver: zodResolver(brandSchema),
+    defaultValues: {
+      name: "",
+      image: "", // Default to empty string for optional image 
+    }
+  })
 
   const fetchBrands = async () => {
     try {
@@ -70,6 +79,27 @@ const Brands = () => {
     }
   }
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const response = await axiosPrivate.get("/brands");
+      setBrands(response.data);
+      toast("Brands refreshed successfully");
+    } catch (error) {
+      console.log("Failed to refresh successfully", error);
+      toast("Failed to refresh successfully");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  const handleUpdateBrand = async () => {
+
+  }
+
+  const handleDeleteBrand = async () => {
+
+  }
   return (
     <div className='p-5 space-y-6'>
       <div className='flex justify-between items-center'>
@@ -77,7 +107,7 @@ const Brands = () => {
         <div className='flex items-center gap-2'>
           <Button
             variant="outline"
-            // onClick={handleRefresh}
+            onClick={handleRefresh}
             disabled={refreshing}
           >
             <RefreshCw
@@ -166,6 +196,8 @@ const Brands = () => {
           </Table>
         </div>
       )}
+
+      {/* Add brands */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen} >
         <DialogContent className='sm:max-w-[425px]'>
           <DialogHeader>
@@ -236,6 +268,99 @@ const Brands = () => {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Brand Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className='sm:max-w-[425px]'>
+          <DialogHeader>
+            <DialogTitle>Edit Brand</DialogTitle>
+            <DialogDescription>Update brand information</DialogDescription>
+          </DialogHeader>
+          <Form {...formEdit}>
+            <form
+              onSubmit={formEdit.handleSubmit(handleUpdateBrand)}
+              className='space-y-4'
+            >
+              <FormField
+                control={formEdit.control}
+                name='name'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={formLoading} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              >
+              </FormField>
+
+              <FormField
+                control={formEdit.control}
+                name='image'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Brand Image (Optional)</FormLabel>
+                    <FormControl>
+                      <ImageUpLoad
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        disabled={formLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              >
+              </FormField>
+              <DialogFooter>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => setIsEditModalOpen(false)}
+                  disabled={formLoading}
+                >
+                  Cancel
+                </Button>
+                <Button type='submit' disabled={formLoading}>
+                  {formLoading ? (
+                    <>
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                      Updating ...
+                    </>
+                  ) : (
+                    "Update Brand"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Brand confirmation*/}
+      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the brand
+              <span className='font-semibold'>{selectedBrand?.name}</span> .
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteBrand}
+              className='bg-destructive hover:bg-destructive/90'
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

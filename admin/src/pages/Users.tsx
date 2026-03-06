@@ -91,6 +91,7 @@ const UsersPage = () => {
         setUsers(response?.data?.users);
         setTotal(response?.data?.users.length);
       }
+      toast("Users refreshed successfully");
     } catch (error) {
       console.log("Failed to load users", error);
       toast.error("Failed to load users");

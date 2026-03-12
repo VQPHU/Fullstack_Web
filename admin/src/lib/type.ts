@@ -13,3 +13,11 @@ export type Brand = {
     image?: string; // Image is optional 
     createdAt: string;
 };
+
+export type Category = {
+    _id: string;
+    name: string;
+    image?: string;
+    categoryType: "Featured" | "Hot Categories" | "Top Categories";
+    createdAt: string;
+};

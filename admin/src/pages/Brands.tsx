@@ -11,7 +11,7 @@ import { brandSchema } from '@/lib/validation';
 import useAuthStore from '@/store/useAuthStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Edit, Loader2, Plus, RefreshCw, Trash } from 'lucide-react';
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from "zod";
@@ -93,13 +93,50 @@ const Brands = () => {
     }
   }
 
-  const handleUpdateBrand = async () => {
+  const handleEdit = (brand: Brand) => {
+    setSelectedBrand(brand);
+    formEdit.reset({
+      name: brand.name,
+      image: brand.image || "",
+    });
+    setIsEditModalOpen(true);
+  };
 
+  const handleDelete = (brand: Brand) => {
+    setSelectedBrand(brand);
+    setIsDeleteModalOpen(true);
+  }
+
+  const handleUpdateBrand = async (data: FormData) => {
+    if (!selectedBrand) return;
+
+    setFormLoading(true);
+    try {
+      await axiosPrivate.put(`/brands/${selectedBrand._id}`, data);
+      toast("Brand updated successfully");
+      setIsEditModalOpen(false);
+      fetchBrands();
+    } catch (error) {
+      console.log("Failed to update brand", error);
+      toast("Failed to update brand");
+    } finally {
+      setFormLoading(false);
+    }
   }
 
   const handleDeleteBrand = async () => {
+    if (!selectedBrand) return;
+    try {
+      await axiosPrivate.delete(`/brands/${selectedBrand._id}`);
+      toast("Brand deteled successfully");
+      setIsDeleteModalOpen(false);
+      fetchBrands();
+    } catch (error) {
+      console.log("Failed to delete brand", error);
+      toast("Failed to delete brand")
+    }
+  };
 
-  }
   return (
     <div className='p-5 space-y-6'>
       <div className='flex justify-between items-center'>
@@ -346,7 +383,7 @@ const Brands = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the brand
+              This action cannot be undone. This will permanently delete the brand{" "}
               <span className='font-semibold'>{selectedBrand?.name}</span> .
             </AlertDialogDescription>
           </AlertDialogHeader>

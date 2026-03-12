@@ -35,3 +35,11 @@ export const brandSchema = z.object({
     name: z.string().min(2, { message: "name" }),
     image: z.string().optional()
 })
+
+export const categorySchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    image: z.string().optional(),
+    categoryType: z.enum(["Featured", "Hot Categories", "Top Categories"], {
+        message: "Please select a valid role",
+    }),
+});

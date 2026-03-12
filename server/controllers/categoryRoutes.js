@@ -7,9 +7,7 @@ import cloudinary from "../config/cloudinary.js";
 // @access Private 
 const getCategories = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page) || 1 // default to page 1 
-
     const perPage = parseInt(req.query.perPage) || 20 // default to 10 per page 
-
     const sortOrder = req.query.sortOrder || "asc"; // default to ascending 
 
     // validate page and perPage 

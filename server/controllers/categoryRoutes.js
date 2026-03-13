@@ -28,7 +28,7 @@ const getCategories = asyncHandler(async (req, res) => {
     const categories = await Category.find({})
         .skip(skip)
         .limit(perPage)
-        .sort({ createAt: sortValue }) // sort by createdAt 
+        .sort({ createdAt: sortValue }) // sort by createdAt 
 
     const totalPages = Math.ceil(total / perPage);
 
@@ -81,6 +81,7 @@ const createCategory = asyncHandler(async (req, res) => {
         const result = await cloudinary.uploader.upload(image, {
             folder: "babymartyt/categories",
         });
+        imageUrl = result.secure_url;
     }
 
     const category = await Category.create({
@@ -118,7 +119,7 @@ const updateCategory = asyncHandler(async (req, res) => {
 
         if (image !== undefined) {
             if (image) {
-                const result = await cloudinary.uploader.update(image, {
+                const result = await cloudinary.uploader.upload(image, {
                     folder: "babymartyt/categories",
                 });
                 category.image = result.secure_url;

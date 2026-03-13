@@ -10,10 +10,12 @@ import type { Category } from "@/lib/type";
 import { categorySchema } from "@/lib/validation";
 import useAuthStore from "@/store/useAuthStore";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowDown, ArrowUp, ChevronFirst, ChevronLeft, Edit, Loader2, Plus, RefreshCw, Trash } from "lucide-react";
-import { useState } from "react";
+import { AxiosError } from "axios";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Edit, Loader2, Plus, RefreshCw, Trash } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import z from "zod";
+import { toast } from "sonner";
+import z, { includes, set } from "zod";
 
 type FormData = z.infer<typeof categorySchema>;
 
@@ -54,8 +56,143 @@ const Categories = () => {
     },
   });
 
-  const handleAddCategory = async () => { };
+  const fetchCategories = async () => {
+    setLoading(true);
+    try {
+      const response = await axiosPrivate.get("/categories", {
+        params: { page, perPage, sortOrder },
+      });
+      setCategories(response?.data?.categories || []);
+      setTotal(response?.data?.total || 0);
+      setTotalPages(response?.data?.totalPages || 1);
+    } catch (error) {
+      console.log("Failed to fetch categories", error);
+      toast.error("Failed to fetch categories");
+    } finally {
+      setLoading(false);
+    }
+  }
 
+  useEffect(() => {
+    fetchCategories();
+  }, [page, sortOrder]);
+
+  const handlePreviousPage = () => {
+    if (page > 1) {
+      setPage(page - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (page < totalPages) {
+      setPage(page + 1);
+    }
+  };
+
+  const handleAddCategory = async (data: FormData) => {
+    setFormLoading(true);
+    try {
+      await axiosPrivate.post("/categories", data);
+      toast("Category created successfully");
+      formAdd.reset();
+      setIsAddModalOpen(false);
+      setPage(1); // Reset to page 1 after adding 
+      fetchCategories();
+    } catch (error: unknown) {
+      console.log("Failed to create category", error);
+      let errorMessage = "Failed to create category";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      if (errorMessage.includes("already exists")) {
+        formAdd.setError("name", { type: "manual", message: errorMessage });
+      } else {
+        toast(errorMessage);
+      }
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleEdit = async (category: Category) => {
+    setSelectedCategory(category);
+    formEdit.reset({
+      name: category.name,
+      image: category.image || "",
+      categoryType: category.categoryType,
+    });
+    setIsEditModalOpen(true);
+  }
+  const handleDelete = async (category: Category) => {
+    setSelectedCategory(category);
+    setIsDeleteModalOpen(true);
+  }
+
+  const handleUpdateCategory = async (data: FormData) => {
+    if (!selectedCategory) return;
+    setFormLoading(true);
+    try {
+      await axiosPrivate.put(`/categories/${selectedCategory._id}`, data);
+      console.log("Update data:", data);
+      toast("Category updated successfully");
+      setIsEditModalOpen(false);
+      fetchCategories();
+    } catch (error: unknown) {
+      console.log("Failed to update category", error);
+      let errorMessage = "Failed to update category";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      if (errorMessage.includes("already exists")) {
+        formEdit.setError("name", { type: "manual", message: errorMessage });
+      } else {
+        toast(errorMessage);
+      }
+    } finally {
+      setFormLoading(false);
+    }
+  }
+  const handleDeleteCategory = async () => {
+    if (!selectedCategory) return;
+    // setLoading(true);
+    try {
+      await axiosPrivate.delete(`/categories/${selectedCategory._id}`);
+      toast("Category deleted successfully");
+      setIsDeleteModalOpen(false);
+      setPage(1); // Reset to page 1 after deleting
+      fetchCategories();
+    } catch (error) {
+      console.log("Failed to delete category", error);
+      toast("Failed to delete category");
+    }
+    // finally {
+    //   setLoading(false);
+    // }
+  }
+
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const response = await axiosPrivate.get("/categories", {
+        params: { page, perPage, sortOrder },
+      });
+      setCategories(response?.data?.categories || []);
+      setTotal(response?.data?.total || 0);
+      setTotalPages(response?.data?.totalPages || 1);
+      toast("categories refreshed successfully");
+    } catch (error) {
+      console.log("Failed to refresh successfully", error);
+      toast("Failed to refresh successfully");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  const handleSortChange = async (newSortOrder: "asc" | "desc") => {
+    setSortOrder(newSortOrder);
+    setPage(1);
+  }
   return (
     <div className="p-5 space-y-6">
       <div className="flex justify-between items-center">
@@ -68,7 +205,7 @@ const Categories = () => {
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            // onClick={handleRefresh}
+            onClick={handleRefresh}
             disabled={refreshing}
           >
             <RefreshCw
@@ -78,7 +215,7 @@ const Categories = () => {
           </Button>
           <Select
             value={sortOrder}
-          // onValueChange={handleSortChange}
+            onValueChange={handleSortChange}
           >
             <SelectTrigger className="w-40 bg-background text-sm shadow-sm">
               <SelectValue placeholder="Sort Order" />
@@ -155,7 +292,7 @@ const Categories = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                        // onClick={() => handleEdit(category)}
+                          onClick={() => handleEdit(category)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -163,7 +300,7 @@ const Categories = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                        // onClick={() => handleDelete(category)}
+                          onClick={() => handleDelete(category)}
                         >
                           <Trash className="h-4 w-4" />
                         </Button>
@@ -210,7 +347,7 @@ const Categories = () => {
                   disabled={page === totalPages}
                 >
                   Next
-                  <ChevronFirst className="h-4 w-4 ml-2" />
+                  <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             </div>
@@ -313,6 +450,138 @@ const Categories = () => {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Category Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+            <DialogDescription>Update category information
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...formEdit}>
+            <form
+              onSubmit={formEdit.handleSubmit(handleUpdateCategory)}
+              className="space-y-4"
+            >
+              <FormField
+                control={formEdit.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={formLoading} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={formEdit.control}
+                name="categoryType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category Type</FormLabel>
+                    <FormControl>
+                      <select
+                        {...field}
+                        disabled={formLoading}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm
+                      ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      >
+                        <option value="" disabled>
+                          Select a category type
+                        </option>
+                        <option value="Featured">Featured</option>
+                        <option value="Hot Categories">Hot Categories</option>
+                        <option value="Top Categories">Top Categories</option>
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={formEdit.control}
+                name="image"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category Image (Optional)</FormLabel>
+                    <FormControl>
+                      <ImageUpLoad
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        disabled={formLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditModalOpen(false)}
+                  disabled={formLoading}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={formLoading}>
+                  {formLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating ...
+                    </>
+                  ) : (
+                    "Update Category"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Category Confirmation */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Are you sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the category {""}
+              <span className="font-semibold">{selectedCategory?.name}</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={formLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={formLoading}
+              onClick={handleDeleteCategory}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {formLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting ...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

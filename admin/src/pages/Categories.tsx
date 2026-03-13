@@ -1,15 +1,21 @@
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import ImageUpLoad from "@/components/ui/image.upload";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import type { Category } from "@/lib/type";
 import { categorySchema } from "@/lib/validation";
 import useAuthStore from "@/store/useAuthStore";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowDown, ArrowUp, Loader2, Plus, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronFirst, ChevronLeft, Edit, Loader2, Plus, RefreshCw, Trash } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import z from "zod";
 
+type FormData = z.infer<typeof categorySchema>;
 
 const Categories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -47,6 +53,8 @@ const Categories = () => {
       categoryType: "Featured",
     },
   });
+
+  const handleAddCategory = async () => { };
 
   return (
     <div className="p-5 space-y-6">
@@ -119,14 +127,194 @@ const Categories = () => {
               <TableBody>
                 {categories.map((category) => (
                   <TableRow key={category._id}>
+                    <TableCell>
+                      {category.image ? (
+                        <div className="h-12 w-12 rounded overflow-hidden bg-muted">
+                          <img
+                            src={category.image}
+                            alt={category.name}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-12 w-12 rounded bg-muted flex
+                      items-center justify-center text-muted-foreground">
+                          No Image
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {category.name}
+                    </TableCell>
+                    <TableCell>{category.categoryType}</TableCell>
+                    <TableCell>
+                      {new Date(category.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                        // onClick={() => handleEdit(category)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
 
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                        // onClick={() => handleDelete(category)}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
+                {categories.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={isAdmin ? 5 : 4}
+                      className="text-center py-10 text-muted-foreground"
+                    >
+                      No categories found
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination Controls  */}
+          {total > 0 && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Showing {(page - 1) * perPage + 1} to {" "}
+                {Math.min(page * perPage, total)} of (total) categories
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Previous
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={page === totalPages}
+                >
+                  Next
+                  <ChevronFirst className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       )}
+
+      {/* Add Category Modal */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Category</DialogTitle>
+            <DialogDescription>Create a new product category
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...formAdd}>
+            <form
+              onSubmit={formAdd.handleSubmit(handleAddCategory)}
+              className="space-y-4"
+            >
+              <FormField
+                control={formAdd.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={formLoading} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={formAdd.control}
+                name="categoryType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>category Type</FormLabel>
+                    <FormControl>
+                      <select
+                        {...field}
+                        disabled={formLoading}
+                        className="w-full rounded-md border border-input 
+                        bg-background px-3 py-2 text-sm
+                        ring-offset-background focus:outline-none 
+                        focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      >
+                        <option value="" disabled>
+                          Select a category type
+                        </option>
+                        <option value="Featured">Featured</option>
+                        <option value="Hot Categories">Hot Categories</option>
+                        <option value="Top Categories">Top Categories</option>
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={formAdd.control}
+                name="image"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category Image (Optional)</FormLabel>
+                    <FormControl>
+                      <ImageUpLoad
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        disabled={formLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAddModalOpen(false)}
+                  disabled={formLoading}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={formLoading}>
+                  {formLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating ...
+                    </>
+                  ) : (
+                    "Create Category"
+                  )}
+
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

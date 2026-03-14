@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "./ui/button";
-import { Bookmark, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard, LogOut, Tag, User, Users } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard, LogOut, Package, ShoppingBag, Tag, User, Users } from "lucide-react";
 import useAuthStore from "@/store/useAuthStore";
 import { NavLink, useLocation } from "react-router";
 
@@ -35,6 +35,11 @@ const navigationItems = [
     icon: <Users size={20} />,
     label: "Users "
   },
+    {
+    to: "/dashboard/orders",
+    icon: <Package size={20} />,
+    label: "Orders "
+  },
   {
     to: "/dashboard/invoices",
     icon: <FileText size={20} />,
@@ -44,6 +49,11 @@ const navigationItems = [
     to: "/dashboard/banners",
     icon: <Layers size={20} />,
     label: "Banners",
+  },
+  {
+    to: "/dashboard/products",
+    icon: <ShoppingBag  size={20} />,
+    label: "products"
   },
   {
     to: "/dashboard/categories",

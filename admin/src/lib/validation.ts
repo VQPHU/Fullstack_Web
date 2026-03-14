@@ -4,7 +4,7 @@ export const loginSchema = z.object({
     email: z.string().email({ message: "Please enter valid email address" }),
     password: z
         .string().min(1, { message: "you have to enter a password" }),
-      
+
 });
 
 export const registerSchema = z.object({
@@ -43,3 +43,16 @@ export const categorySchema = z.object({
         message: "Please select a valid role",
     }),
 });
+
+export const productSchema = z.object({
+    name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+    description: z
+        .string()
+        .min(10, { message: "Description must be  at least 10 characters" }),
+    price: z.number().min(0, { message: "Price must be a positive number" }),
+    discountPercentage: z.number().min(0).max(100).default(0),
+    stock: z.number().min(0).default(0),
+    category: z.string().min(1, { message: "Pleace select a category" }),
+    brand: z.string().min(1, { message: "Pleace select a brand" }),
+    image: z.string().min(1, { message: "Pleace select an image" }), 
+})

@@ -21,3 +21,17 @@ export type Category = {
     categoryType: "Featured" | "Hot Categories" | "Top Categories";
     createdAt: string;
 };
+
+export type Product = {
+    _id: string;
+    name: string;
+    description: string;
+    price: number;
+    discountPercentage: number;
+    stock: number;
+    averageRating: number;
+    image: string;
+    category: Category;
+    brand: Brand;
+    createdAt: string;
+}

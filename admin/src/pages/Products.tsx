@@ -12,15 +12,15 @@ import { useAxiosPrivate } from '@/hooks/useAxiosPrivate';
 import { Brand, Category, Product } from '@/lib/type';
 import { productSchema } from '@/lib/validation';
 import useAuthStore from '@/store/useAuthStore';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { AxiosError } from 'axios';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Edit, Loader2, Plus, RefreshCw, Trash } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import z from 'zod';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
-type FormData = z.infer<typeof productSchema>
+type FormData = z.infer<typeof productSchema>;
 
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -138,7 +138,7 @@ const Products = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [page, sortOrder]);
 
   useEffect(() => {
     fetchCategories();
@@ -198,8 +198,102 @@ const Products = () => {
     }
   };
 
-  const handleUpdateProduct = async () => { }
-  const handleDeleteProduct = async () => { }
+  const handleEdit = (product: Product) => {
+    setSelectedProduct(product);
+
+    formEdit.reset({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      discountPercentage: product.discountPercentage,
+      stock: product.stock,
+      category: product.category._id,
+      brand: product.brand._id,
+      image: product.image,
+    });
+
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = (product: Product) => {
+    setSelectedProduct(product);
+    setIsDeleteModalOpen(true);
+  }
+
+  const handleUpdateProduct = async (data: FormData) => {
+    if (!selectedProduct) return;
+
+    setFormLoading(true);
+
+    try {
+      await axiosPrivate.put(`/products/${selectedProduct._id}`, {
+        ...data,
+        price: Number(data.price),
+        discountPercentage: Number(data.discountPercentage),
+        stock: Number(data.stock),
+      });
+
+      toast("Product updated successfully");
+      setIsEditModalOpen(false);
+      fetchProducts();
+    } catch (error: unknown) {
+      console.log("Failed to update product", error);
+
+      let errorMessage = "Failed to update product";
+
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      if (errorMessage.includes("already exists")) {
+        formEdit.setError("name", { type: "manual", message: errorMessage });
+      } else {
+        toast(errorMessage);
+      }
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!selectedProduct) return;
+
+    try {
+      await axiosPrivate.delete(`/products/${selectedProduct._id}`);
+      toast("Product deleted successfully");
+      setIsDeleteModalOpen(false);
+      fetchProducts(true); // Reset to page 1 and refetch
+    } catch (error) {
+      console.log("Failed to delete product", error);
+      toast("Failed to delete product");
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+
+    try {
+      const response = await axiosPrivate.get("/products", {
+        params: { page, perPage, sortOrder },
+      });
+
+      setProducts(response?.data?.products || []);
+      setTotal(response?.data?.total || 0);
+      setTotalPages(response?.data?.totalPages || 1);
+
+      toast("Products refreshed successfully");
+    } catch (error) {
+      console.log("Failed to refresh products", error);
+      toast("Failed to refresh products");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleSortChange = (value: "asc" | "desc") => {
+    setSortOrder(value);
+    setPage(1); // Reset to page 1 when sort order changes
+  };
 
   return (
     <div className="p-5 space-y-6">
@@ -214,7 +308,7 @@ const Products = () => {
         <div className="flex items-center gap-3 rounded-lg bg-muted/50 p-2 shadow-sm">
           <Button
             variant="outline"
-            // onClick={handleRefresh}
+            onClick={handleRefresh}
             disabled={refreshing}
             className="bg-background text-sm shadow-sm hover:bg-muted/10 focus:ring-2 focus:ring-ring"
           >
@@ -224,8 +318,10 @@ const Products = () => {
             {refreshing ? "Refreshing..." : "Refresh"}
           </Button>
 
-          <Select value={sortOrder}>
-            {/* onValueChange={handleSortChange} */}
+          <Select
+            value={sortOrder}
+            onValueChange={handleSortChange}
+          >
             <SelectTrigger
               className="w-40 bg-background text-sm shadow-sm hover:bg-muted/10 focus:ring-2 focus:ring-ring"
               aria-label="Sort order"
@@ -269,7 +365,7 @@ const Products = () => {
               <Table>
                 <TableHeader>
                   <TableRow className='border-b border-border/50  bg-muted/50'>
-                    <TableHead className='w-80px font-semibold'>
+                    <TableHead className='w-[80px] font-semibold'>
                       Image
                     </TableHead>
                     <TableHead className='font-semibold min-w-[200px]'>
@@ -342,7 +438,7 @@ const Products = () => {
 
                       <TableCell>
                         <div className='flex items-center gap-1 whitespace-nowrap'>
-                          <span className='text-yellow-500'>sao</span>
+                          <span className='text-yellow-500'>⭐</span>
                           <span className='font-medium'>
                             {product.averageRating.toFixed(1)}
                           </span>
@@ -368,7 +464,7 @@ const Products = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              // onClick={() => handleEdit(product)}
+                              onClick={() => handleEdit(product)}
                               className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600 flex-shrink-0"
                               title="Edit product"
                             >
@@ -377,7 +473,7 @@ const Products = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              // onClick={() => handleDelete(product)}
+                              onClick={() => handleDelete(product)}
                               className="h-8 w-8 hover:bg-red-50 hover:text-red-600 flex-shrink-0"
                               title="Delete product"
                             >
@@ -592,7 +688,7 @@ const Products = () => {
                       <FormLabel>Category</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                         disabled={formLoading}
                       >
                         <FormControl>
@@ -622,7 +718,7 @@ const Products = () => {
                     <FormLabel>Brand</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       disabled={formLoading}
                     >
                       <FormControl>

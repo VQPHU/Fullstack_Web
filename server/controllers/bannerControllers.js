@@ -26,7 +26,7 @@ const getBannerById = asyncHandler(async (req, res) => {
 // @desc Create a banner 
 // @route POST /api/banners 
 // @access Private/Admin 
-const createBanner = asyncHandler(async (req, res) => {
+const createdBanner = asyncHandler(async (req, res) => {
     const { name, title, startFrom, image, bannerType } = req.body;
 
     // const bannerExists = await User.findOne({ name });
@@ -52,7 +52,7 @@ const createBanner = asyncHandler(async (req, res) => {
     });
 
     const createdBanner = await banner.save();
-    if (createBanner) {
+    if (createdBanner) {
         res.status(201).json(createdBanner);
     } else {
         res.status(400);
@@ -79,9 +79,9 @@ const updateBanner = asyncHandler(async (req, res) => {
                     const result = await cloudinary.uploader.upload(image, {
                         folder: "babymartyt/banners",
                     });
-                    brand.image = result.secure_url;
+                    banner.image = result.secure_url;
                 } else {
-                    brand.image = undefined; // Clear image if empty string 
+                    banner.image = undefined;// Clear image if empty string 
                 }
             }
             const updatedBanner = await banner.save();
@@ -116,4 +116,4 @@ const deleteBanner = asyncHandler(async (req, res) => {
     }
 });
 
-export { getBanners, getBannerById, createBanner, updateBanner, deleteBanner }
+export { getBanners, getBannerById, createdBanner, updateBanner, deleteBanner }

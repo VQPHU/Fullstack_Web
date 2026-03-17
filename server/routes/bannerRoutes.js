@@ -2,7 +2,7 @@ import express from 'express'
 import {
     getBanners,
     getBannerById,
-    createBanner,
+    createdBanner,
     updateBanner,
     deleteBanner,
 } from "../controllers/bannerControllers.js"
@@ -122,7 +122,7 @@ const router = express.Router();
 
 router.route("/")
     .get(getBanners)
-    .post(protect, admin, createBanner);
+    .post(protect, admin, createdBanner);
 router.route("/:id")
     .get(protect, getBannerById)
     .put(protect, admin, updateBanner)

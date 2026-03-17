@@ -56,3 +56,12 @@ export const productSchema = z.object({
     brand: z.string().min(1, { message: "Pleace select a brand" }),
     image: z.string().min(1, { message: "Pleace select an image" }), 
 });
+
+// Define the Zod schema for banner validation
+export const bannerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  title: z.string().min(1, "Title is required"),
+  startFrom: z.number().min(0, "StartFrom must be a positive number"),
+  image: z.string().min(1, "Image is required"),
+  bannerType: z.string().min(1, "Type is required"),
+});

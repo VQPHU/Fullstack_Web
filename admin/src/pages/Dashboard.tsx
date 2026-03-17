@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
+import { StatsCard } from '@/components/StatsCard';
 
 
 const COLORS = [

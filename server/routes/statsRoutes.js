@@ -1,6 +1,6 @@
 import express from 'express'
 import { getStats } from "../controllers/statsController.js";
-import { protect } from '../middleware/authMiddleware.js'; 
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 /**
@@ -30,6 +30,6 @@ const router = express.Router();
  */
 
 
-router.route("/", protect, getStats);
+router.route("/").get(protect, getStats);
 
 export default router;

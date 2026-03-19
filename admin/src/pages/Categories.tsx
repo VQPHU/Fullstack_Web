@@ -15,7 +15,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Edit, Loader2, Plus, Ref
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import z, { includes, set } from "zod";
+import z from "zod";
 
 type FormData = z.infer<typeof categorySchema>;
 

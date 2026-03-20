@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Header from "@/components/header/Header";
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: "Babyshop | Online shopping places",
@@ -17,6 +18,13 @@ export default function RootLayout({
         <Header />
         {children}
         {/* Footer */}
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            className: "rounded-lg shadow-lg border",
+            duration: 4000,
+          }}
+        />
       </body>
     </html>
   );

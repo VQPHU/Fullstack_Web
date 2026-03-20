@@ -3,6 +3,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
 import DiscountBadge from './DiscountBadge'
+import PriceContainer from './PriceContainer'
+import AddToCartButton from './AddToCartButton'
 
 const ProductCard = ({ product }: { product: Product }) => {
     return (
@@ -29,7 +31,12 @@ const ProductCard = ({ product }: { product: Product }) => {
                 <p className='className="uppercase text-xs font-medium text-babyshopTextLight'>
                     {product?.category?.name}
                 </p>
-                <p className="line-clamp-2 text-sm">{product?.name}</p>
+                <p className="line-clamp-2 text-sm h-10">{product?.name}</p>
+                <PriceContainer
+                    price={product?.price}
+                    discountPercentage={product?.discountPercentage}
+                />
+                <AddToCartButton product={product} />
             </div>
         </div>
     )

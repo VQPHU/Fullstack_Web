@@ -26,7 +26,7 @@ const ProductsList = async () => {
   }
 
   return (
-    <div className='className="w-full bg-babyshopWhite border mt-3 rounded-md"'>
+    <div className="w-full bg-babyshopWhite border mt-3 rounded-md">
       <div className="w-full p-5 grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {products?.map((product) => (
           <ProductCard key={product?._id} product={product} />

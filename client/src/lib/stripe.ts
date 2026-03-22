@@ -1,0 +1,69 @@
+import { loadStripe } from "@stripe/stripe-js";
+
+// This should be your Stripe publishable key
+const stripePublishableKey =
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+
+// Make sure to call `loadStripe` outside of a component's render to avoid
+// recreating the `Stripe` object on every render.
+export const stripePromise = loadStripe(stripePublishableKey);
+
+export interface StripeCheckoutItem {
+  name: string;
+  description?: string;
+  amount: number; // in cents
+  currency: string;
+  quantity: number;
+  images?: string[];
+}
+
+export interface CheckoutSessionRequest {
+  items: StripeCheckoutItem[];
+  successUrl: string;
+  cancelUrl: string;
+  customerEmail?: string;
+  metadata?: Record<string, string>;
+}
+
+// Create a checkout session
+export const createCheckoutSession = async (
+  data: CheckoutSessionRequest
+): Promise<{ sessionId: string } | { error: string }> => {
+  try {
+    const response = await fetch("/api/create-checkout-session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to create checkout session");
+    }
+
+    const { sessionId } = await response.json();
+    return { sessionId };
+  } catch (error) {
+    console.error("Error creating checkout session:", error);
+    return { error: error instanceof Error ? error.message : "Unknown error" };
+  }
+};
+
+// Redirect to Stripe Checkout
+export const redirectToCheckout = async (sessionId: string) => {
+  const stripe = await stripePromise;
+
+  if (!stripe) {
+    throw new Error("Stripe failed to load");
+  }
+
+  const { error } = await stripe.redirectToCheckout({
+    sessionId,
+  });
+
+  if (error) {
+    console.error("Error redirecting to checkout:", error);
+    throw error;
+  }
+};

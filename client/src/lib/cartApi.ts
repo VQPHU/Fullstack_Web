@@ -141,7 +141,8 @@ export const removeFromCart = async (
 
 export const clearCart = async (): Promise<CartResponse> => {
   try {
-    const response = await authApi.delete("/cart");
+    const response = await authApi.delete("/cart"); 
+
     if (response.success && response.data) {
       return {
         success: true,

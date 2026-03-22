@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "res.cloudinary.com",
       },
+      {
+        protocol: "https",
+        hostname: "reactbd-images-ecommerce.s3.us-east-1.amazonaws.com",
+      },
     ],
   },
 };

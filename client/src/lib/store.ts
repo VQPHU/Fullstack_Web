@@ -147,7 +147,7 @@ interface WishlistState {
 interface Currency {
     code: string;
     name: string;
-    stmbol: string;
+    symbol: string; 
     rate: number; // Exchane rate relative to USB 
 }
 
@@ -436,7 +436,8 @@ export const useCartStore = create<CartState>()(
                 set({ isLoading: true });
                 try {
                     const { clearCart } = await import("./cartApi");
-                    const response = await clearCart(auth_token);
+                    const response = await clearCart();
+                    //  const response = await clearCart(auth_token);
 
                     if (response.success) {
                         set({
@@ -482,7 +483,8 @@ export const useCartStore = create<CartState>()(
                 set({ isLoading: true });
                 try {
                     const { getUserCart } = await import("./cartApi");
-                    const response = await getUserCart(auth_token);
+                    const response = await getUserCart();
+                    // const response = await getUserCart(auth_token);
 
                     if (response.success) {
                         const cartItemsWithQuantities =

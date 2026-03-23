@@ -1,4 +1,4 @@
-# Babymart E-commerce Platform
+# E-commerce Platform
 
 A modern, full-stack e-commerce platform specifically designed for baby products, built with cutting-edge technologies and best practices.
 

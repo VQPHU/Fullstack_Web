@@ -15,7 +15,6 @@ const CategoriesSection = async () => {
   try {
     const data = await fetchData<CategoriesResponse>("/categories");
     categories = data.categories;
-    console.log(data)
   } catch (err) {
     error = err instanceof Error ? err.message : "An unknown error occurred";
     console.log("error", error);

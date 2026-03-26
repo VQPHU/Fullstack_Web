@@ -1,10 +1,8 @@
-import CartPageClient from '@/components/pages/CartPageClient'
-import React from 'react'
+import CartPageClient from "@/components/pages/CartPageClient";
+import React from "react";
 
 const CartPage = () => {
-    return (
-        <CartPageClient />
-    )
-}
+  return <CartPageClient />;
+};
 
-export default CartPage
+export default CartPage;

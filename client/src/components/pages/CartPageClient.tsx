@@ -9,9 +9,11 @@ import Container from "@/components/common/container";
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import PageBreadcrumb from '../common/PageBreadcrumb';
-import { Separator } from 'radix-ui';
+
 import PriceFormatter from '../common/PriceFormatter';
 import Image from 'next/image';
+import { Separator } from '../ui/separator';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 
 const CartPageClient = () => {
   const {
@@ -26,6 +28,7 @@ const CartPageClient = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const router = useRouter();
+  const TAX_RATE = 0.08;
 
   useEffect(() => {
     const initializeCart = async () => {
@@ -52,7 +55,7 @@ const CartPageClient = () => {
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
     const shipping = subtotal > 100 ? 0 : 15; // Free shipping over $100
-    const tax = subtotal * 0.08; // 8% tax
+    const tax = subtotal * TAX_RATE; // 8% tax
     return subtotal + shipping + tax;
   };
 
@@ -85,6 +88,7 @@ const CartPageClient = () => {
   };
 
   const confirmClearCart = async () => {
+    setIsLoading(true);
     try {
       await clearCart();
       setShowClearDialog(false);
@@ -92,6 +96,8 @@ const CartPageClient = () => {
     } catch (error) {
       console.error("Failed to clear cart:", error);
       toast.error("Failed to clear cart");
+    }finally{
+      setIsLoading(false);
     }
   };
 
@@ -227,9 +233,9 @@ const CartPageClient = () => {
 
           {/* Cart Items */}
           <div className="space-y-4">
-            {cartItemsWithQuantities.map((cartItem) => (
+            {cartItemsWithQuantities?.map((cartItem) => (
               <div
-                key={cartItem.product._id}
+                key={cartItem?.product?._id}
                 className="border border-gray-100 rounded-lg p-4 lg:p-0 lg:border-0 lg:rounded-none"
               >
                 {/* Mobile Layout */}
@@ -238,7 +244,7 @@ const CartPageClient = () => {
                     {/* Product Image */}
                     <Link href={`/product/${cartItem.product._id}`}>
                       <div className="relative w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 hover:scale-105 transition-transform duration-200 cursor-pointer">
-                        {cartItem.product.image ? (
+                        {cartItem?.product?.image ? (
                           <Image
                             src={cartItem.product.image}
                             alt={cartItem.product.name}
@@ -257,7 +263,7 @@ const CartPageClient = () => {
                     <div className="flex-1 min-w-0">
                       <Link href={`/product/${cartItem.product._id}`}>
                         <h3 className="font-medium text-gray-900 mb-2 text-sm leading-5 hover:text-blue-600 transition-colors cursor-pointer">
-                          {cartItem.product.name}
+                          {cartItem?.product.name}
                         </h3>
                       </Link>
 
@@ -491,7 +497,7 @@ const CartPageClient = () => {
             <div className="flex justify-between items-center py-2">
               <span className="text-gray-600">Tax</span>
               <PriceFormatter
-                amount={calculateSubtotal() * 0.08}
+                amount={calculateSubtotal() * TAX_RATE}
                 className="text-base font-medium text-gray-900"
               />
             </div>
@@ -539,6 +545,37 @@ const CartPageClient = () => {
         </div>
       </div>
     </div>
+
+    {/* Clear Cart Confirmation Modal */}
+      <AlertDialog
+        open={showClearDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowClearDialog(false);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear Cart</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to clear your cart? This action cannot be
+              undone and all items will be removed from your cart.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowClearDialog(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmClearCart}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Yes, Clear Cart
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
   </Container>
 
 };

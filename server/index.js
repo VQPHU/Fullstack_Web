@@ -17,7 +17,7 @@ import statsRoutes from './routes/statsRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
 import wishlistRoutes from './routes/wishlistRoutes.js'
 import cartRoutes from './routes/cartRoutes.js'
-// import analyticsRoutes from './routes/analyticsRoutes.js'
+import analyticsRoutes from './routes/analyticsRoutes.js'
 // import paymentRoutes from './routes/paymentRoutes.js'
 
 // Load env vars
@@ -83,7 +83,7 @@ app.use("/api/stats", statsRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/cart", cartRoutes);
-// app.use("/api/analytics", analyticsRoutes);
+app.use("/api/analytics", analyticsRoutes);
 // app.use("/api/payment", patmentRoutes);
 
 // API Documentation

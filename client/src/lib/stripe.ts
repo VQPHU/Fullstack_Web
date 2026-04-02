@@ -1,17 +1,12 @@
 import { loadStripe } from "@stripe/stripe-js";
 
-// This should be your Stripe publishable key
-const stripePublishableKey =
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
-
-// Make sure to call `loadStripe` outside of a component's render to avoid
-// recreating the `Stripe` object on every render.
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
 export const stripePromise = loadStripe(stripePublishableKey);
 
 export interface StripeCheckoutItem {
   name: string;
   description?: string;
-  amount: number; // in cents
+  amount: number; 
   currency: string;
   quantity: number;
   images?: string[];
@@ -25,10 +20,10 @@ export interface CheckoutSessionRequest {
   metadata?: Record<string, string>;
 }
 
-// Create a checkout session
+// 1. SỬA TẠI ĐÂY: Thêm url vào kiểu trả về của Promise
 export const createCheckoutSession = async (
   data: CheckoutSessionRequest
-): Promise<{ sessionId: string } | { error: string }> => {
+): Promise<{ sessionId: string, url: string } | { error: string }> => {
   try {
     const response = await fetch("/api/create-checkout-session", {
       method: "POST",
@@ -42,28 +37,19 @@ export const createCheckoutSession = async (
       throw new Error("Failed to create checkout session");
     }
 
-    const { sessionId } = await response.json();
-    return { sessionId };
+    // 2. SỬA TẠI ĐÂY: Lấy cả url từ Backend trả về
+    const { sessionId, url } = await response.json();
+    return { sessionId, url }; 
   } catch (error) {
     console.error("Error creating checkout session:", error);
     return { error: error instanceof Error ? error.message : "Unknown error" };
   }
 };
 
-// Redirect to Stripe Checkout
-export const redirectToCheckout = async (sessionId: string) => {
-  const stripe = await stripePromise;
-
-  if (!stripe) {
-    throw new Error("Stripe failed to load");
+// Hàm này bạn viết đã đúng rồi, giữ nguyên
+export const redirectToCheckout = (checkoutUrl: string) => {
+  if (!checkoutUrl) {
+    throw new Error("Checkout URL is missing");
   }
-
-  const { error } = await stripe.redirectToCheckout({
-    sessionId,
-  });
-
-  if (error) {
-    console.error("Error redirecting to checkout:", error);
-    throw error;
-  }
+  window.location.href = checkoutUrl;
 };

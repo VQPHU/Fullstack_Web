@@ -297,12 +297,12 @@ const CheckoutPageClient = () => {
           shippingAddress: JSON.stringify(selectedAddress),
         },
       });
-
-      if ("sessionId" in result) {
-        // Redirect to Stripe Checkout
-        await redirectToCheckout(result.sessionId);
+      // Lấy cái URL từ kết quả trả về
+      if (result && "url" in result) {
+        // Truyền cái URL đó vào hàm redirect
+        redirectToCheckout(result.url as string);
       } else {
-        throw new Error(result.error);
+        throw new Error("Không lấy được link thanh toán");
       }
     } catch (error) {
       console.error("Error processing payment:", error);

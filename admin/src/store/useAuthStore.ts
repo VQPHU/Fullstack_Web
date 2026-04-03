@@ -35,10 +35,19 @@ const useAuthStore = create<AuthState>()(
             try {
                 const response = await api.post("/auth/login", credential)
                 if (response.data.token) {
-                    set({ 
-                        user: response.data.user, 
-                        token: response.data.token, 
-                        isAuthenticated: true, })
+                    // Server returns user data directly, not nested in user object
+                    const userData: User = {
+                        _id: response.data._id,
+                        name: response.data.name,
+                        email: response.data.email,
+                        avatar: response.data.avatar,
+                        role: response.data.role,
+                    };
+                    set({
+                        user: userData,
+                        token: response.data.token,
+                        isAuthenticated: true,
+                    })
                 }
 
             } catch (error) {

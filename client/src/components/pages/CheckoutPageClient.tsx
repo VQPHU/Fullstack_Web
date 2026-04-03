@@ -1,7 +1,7 @@
 "use client"
 
 import { createOrderFromCart, getOrderById, Order } from '@/lib/orderApi';
-import { useCartStore, useUserStore } from '@/lib/store';
+import { useCartStore, useUserStore, useOrderStore } from '@/lib/store';
 import { Address } from '@/types/type';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
@@ -10,7 +10,7 @@ import CheckoutSkeleton from '../skeleton/CheckoutSkeleton';
 import Container from '@/components/common/container'
 import { Button } from '../ui/button';
 import PageBreadcrumb from '../common/PageBreadcrumb';
-import { AlertCircle, CheckCircle, CreditCard, Lock } from 'lucide-react';
+import { AlertCircle, CreditCard, Lock, Truck } from 'lucide-react';
 import PriceFormatter from '../common/PriceFormatter';
 import { Separator } from '../ui/separator';
 import Image from 'next/image';
@@ -25,10 +25,12 @@ const CheckoutPageClient = () => {
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "cod">("card");
   const searchParams = useSearchParams();
   const router = useRouter();
   const { auth_token, authUser, isAuthenticated, verifyAuth } = useUserStore();
   const { cartItemsWithQuantities, clearCart } = useCartStore();
+  const { addOrder } = useOrderStore();
 
   const orderId = searchParams.get("orderId");
   // Verify authentication on component mount
@@ -206,7 +208,7 @@ const CheckoutPageClient = () => {
     return calculateSubtotal() + calculateShipping() + calculateTax();
   };
 
-  const handleStripeCheckout = async () => {
+  const handleCheckout = async () => {
     if (!order) return;
 
     if (!selectedAddress) {
@@ -232,33 +234,39 @@ const CheckoutPageClient = () => {
         const response = await createOrderFromCart(
           auth_token!,
           orderItems,
-          selectedAddress
+          selectedAddress,
+          paymentMethod
         );
+
         if (!response.success || !response.order) {
           throw new Error(response.message || "Failed to create order");
         }
 
         finalOrder = response.order;
         setOrder(finalOrder);
+        addOrder(finalOrder);
 
         // Clear cart after successful order creation
         await clearCart();
         setIsCreatingOrder(false);
       }
 
-      // Convert order items to Stripe format
-      const stripeItems: StripeCheckoutItem[] = finalOrder.items.map(
-        (item) => ({
-          name: item.name,
-          description: `Quantity: ${item.quantity}`,
-          amount: Math.round(item.price * 100), // Convert to cents
-          currency: "usd",
-          quantity: item.quantity,
-          images: item.image ? [item.image] : undefined,
-        })
-      );
+      if (paymentMethod === "cod") {
+        toast.success("Cash on Delivery order placed successfully. Check My Orders.");
+        router.push("/user/orders");
+        return;
+      }
 
-      // Add shipping and tax as separate line items if applicable
+      // Stripe payment flow
+      const stripeItems: StripeCheckoutItem[] = finalOrder.items.map((item) => ({
+        name: item.name,
+        description: `Quantity: ${item.quantity}`,
+        amount: Math.round(item.price * 100),
+        currency: "usd",
+        quantity: item.quantity,
+        images: item.image ? [item.image] : undefined,
+      }));
+
       const shipping = calculateShipping();
       const tax = calculateTax();
 
@@ -282,11 +290,6 @@ const CheckoutPageClient = () => {
         });
       }
 
-      // Create checkout session
-      console.log(
-        "Checkout: Creating session with origin:",
-        window.location.origin
-      );
       const result = await createCheckoutSession({
         items: stripeItems,
         customerEmail: authUser?.email,
@@ -297,12 +300,11 @@ const CheckoutPageClient = () => {
           shippingAddress: JSON.stringify(selectedAddress),
         },
       });
-      // Lấy cái URL từ kết quả trả về
+
       if (result && "url" in result) {
-        // Truyền cái URL đó vào hàm redirect
         redirectToCheckout(result.url as string);
       } else {
-        throw new Error("Không lấy được link thanh toán");
+        throw new Error("Unable to get Stripe checkout URL");
       }
     } catch (error) {
       console.error("Error processing payment:", error);
@@ -410,25 +412,50 @@ const CheckoutPageClient = () => {
           {/* Payment Information */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">
-              Payment Information
+              Payment Method
             </h2>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-4 border-2 border-blue-200 bg-blue-50 rounded-lg">
-                <CreditCard className="w-5 h-5 text-blue-600" />
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">Stripe Checkout</h3>
-                  <p className="text-sm text-gray-600">
-                    Secure payment with Stripe
-                  </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("card")}
+                className={`rounded-lg p-4 text-left border transition ${paymentMethod === "card"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 bg-white"
+                  }`}
+              >
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Card Payment</p>
+                    <p className="text-sm text-gray-600">Credit/debit card via Stripe</p>
+                  </div>
                 </div>
-                <CheckCircle className="w-5 h-5 text-blue-600" />
-              </div>
+              </button>
 
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Lock className="w-4 h-4" />
-                <span>Your payment information is secure and encrypted</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("cod")}
+                className={`rounded-lg p-4 text-left border transition ${paymentMethod === "cod"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 bg-white"
+                  }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Cash on Delivery</p>
+                    <p className="text-sm text-gray-600">Pay when the order arrives</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
+              <Lock className="w-4 h-4" />
+              <span>
+                Your selection will be saved and applied to the order. For card payments, you will be redirected to Stripe.
+              </span>
             </div>
           </div>
         </div>
@@ -492,7 +519,7 @@ const CheckoutPageClient = () => {
 
             <Button
               size="lg"
-              onClick={handleStripeCheckout}
+              onClick={handleCheckout}
               disabled={processing || isCreatingOrder || !selectedAddress}
               className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full py-3 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -514,7 +541,7 @@ const CheckoutPageClient = () => {
               ) : (
                 <>
                   <Lock className="w-4 h-4 mr-2" />
-                  Pay with Stripe
+                  {paymentMethod === "card" ? "Pay with Card" : "Place Cash on Delivery Order"}
                 </>
               )}
             </Button>

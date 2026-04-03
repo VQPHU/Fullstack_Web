@@ -81,7 +81,7 @@ export const getOrderById = asyncHandler(async (req, res) => {
 // @route POST /api/orders
 // @access Private 
 export const createOrderFromCart = asyncHandler(async (req, res) => {
-    const { items, shippingAddress } = req.body;
+    const { items, shippingAddress, paymentMethod = "card" } = req.body;
 
     //Validate that items are provided 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -121,12 +121,14 @@ export const createOrderFromCart = asyncHandler(async (req, res) => {
         return acc + item.price * item.quantity;
     }, 0);
 
-    // Create order with "pending" status (will be update to "paid" after successful payment) 
+    // Create order with "pending" status (will be updated to "paid" after successful payment)
+    // For COD, keep pending so admin can mark paid later
     const order = await Order.create({
         userId: req.user._id,
         items: validItems,
         total,
         status: "pending",
+        paymentMethod,
         shippingAddress,
     });
 
@@ -286,23 +288,18 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
         throw new Error("Order not found");
     }
 
-    // Check authorization based on order status and user role 
-    // - User can only update their own orders when status is "pending"
-    // -Admins can update any order at any time 
+    // Check authorization based on order status and user role
+    // - User can update their own orders to "paid" if status is "pending"
+    // - Admins can update any order at any time
     // - Webhook calls (no req.user) are always allowed
     if (req.user) {
         const isOwner = order.userId.toString() === req.user._id.toString();
         const isAdmin = req.user.role === "admin";
-        const isPending = order.status === "pending";
 
-        // if user is not admin and (not owner OR order is not pending), deny access 
-        if (!isAdmin && (!isOwner || !isPending)) {
+        // Allow if admin or (owner and updating to paid from pending)
+        if (!isAdmin && !(isOwner && status === "paid" && order.status === "pending")) {
             res.status(403);
-            throw new Error(
-                isPending
-                    ? "Not authorized to update this order"
-                    : "Order status can only be updated by main after payment"
-            );
+            throw new Error("Not authorized to update this order");
         }
     }
 

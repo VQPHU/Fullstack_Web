@@ -22,6 +22,7 @@ export interface Order {
   items: OrderItem[];
   total: number;
   status: "pending" | "paid" | "completed" | "cancelled";
+  paymentMethod?: "card" | "cod";
   shippingAddress: ShippingAddress;
   paymentIntentId?: string;
   stripeSessionId?: string;
@@ -48,7 +49,8 @@ export interface CartItem {
 export const createOrderFromCart = async (
   token: string,
   cartItems: CartItem[],
-  shippingAddress: ShippingAddress
+  shippingAddress: ShippingAddress,
+  paymentMethod: "card" | "cod" = "card"
 ): Promise<CreateOrderResponse> => {
   try {
     const response = await fetch(`${API_BASE_URL}/orders`, {
@@ -60,6 +62,7 @@ export const createOrderFromCart = async (
       body: JSON.stringify({
         items: cartItems,
         shippingAddress,
+        paymentMethod,
       }),
     });
 
@@ -99,7 +102,17 @@ export const getUserOrders = async (token: string): Promise<Order[]> => {
       throw new Error("Failed to fetch orders");
     }
 
-    return await response.json();
+    const data = await response.json();
+
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    if (data && (Array.isArray(data.orders) || Array.isArray(data.data?.orders))) {
+      return data.orders || data.data.orders;
+    }
+
+    return [];
   } catch (error) {
     console.error("Error fetching orders:", error);
     return [];

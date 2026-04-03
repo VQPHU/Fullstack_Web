@@ -18,7 +18,7 @@ import orderRoutes from './routes/orderRoutes.js'
 import wishlistRoutes from './routes/wishlistRoutes.js'
 import cartRoutes from './routes/cartRoutes.js'
 import analyticsRoutes from './routes/analyticsRoutes.js'
-// import paymentRoutes from './routes/paymentRoutes.js'
+import paymentRoutes from './routes/paymentRoutes.js'
 
 // Load env vars
 dotenv.config();
@@ -68,6 +68,10 @@ app.use(
 
 // Increase body size limit for JSON and URL-encoded payloads
 app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Stripe webhook raw body
+app.use("/api/payment/webhook", express.raw({ type: "application/json" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 // Debug middleware for order routes
@@ -84,7 +88,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/analytics", analyticsRoutes);
-// app.use("/api/payment", patmentRoutes);
+app.use("/api/payment", paymentRoutes);
 
 // API Documentation
 app.use(

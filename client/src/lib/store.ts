@@ -147,7 +147,7 @@ interface WishlistState {
 interface Currency {
     code: string;
     name: string;
-    symbol: string; 
+    symbol: string;
     rate: number; // Exchane rate relative to USB 
 }
 
@@ -524,11 +524,17 @@ export const useOrderStore = create<OrderState>()(
                 set({ isLoading: true });
                 try {
                     const { getUserOrders } = await import("./orderApi");
-                    const orders = await getUserOrders(token);
-                    set({ orders, isLoading: false });
+                    const res = await getUserOrders(token) as any;
+
+                    console.log("API orders:", res); // 🔥 debug
+
+                    set({
+                        orders: Array.isArray(res) ? res : res.orders || res.data || [],
+                        isLoading: false,
+                    });
                 } catch (error) {
                     console.error("Failed to load orders:", error);
-                    set({ isLoading: false });
+                    set({ orders: [], isLoading: false }); // ✅ luôn reset array
                 }
             },
             getOrdersCount: () => get().orders.length,
@@ -628,45 +634,45 @@ export const loadAllUserData = async (token: string) => {
 
 // Currency store with 12 different currencies 
 export const useCurrencyStore = create<CurrencyState>()(
-  persist(
-    (set, get) => ({
-      selectedCurrency: "USD",
-      currencies: [
-        { code: "USD", name: "US Dollar", symbol: "$", rate: 1.0 },
-        { code: "EUR", name: "Euro", symbol: "€", rate: 0.85 },
-        { code: "GBP", name: "British Pound", symbol: "£", rate: 0.73 },
-        { code: "JPY", name: "Japanese Yen", symbol: "¥", rate: 110.0 },
-        { code: "CAD", name: "Canadian Dollar", symbol: "C$", rate: 1.25 },
-        { code: "AUD", name: "Australian Dollar", symbol: "A$", rate: 1.35 },
-        { code: "CHF", name: "Swiss Franc", symbol: "CHF", rate: 0.92 },
-        { code: "CNY", name: "Chinese Yuan", symbol: "¥", rate: 6.45 },
-        { code: "INR", name: "Indian Rupee", symbol: "₹", rate: 74.5 },
-        { code: "BDT", name: "Bangladeshi Taka", symbol: "৳", rate: 84.8 },
-        { code: "KRW", name: "South Korean Won", symbol: "₩", rate: 1180.0 },
-        { code: "SGD", name: "Singapore Dollar", symbol: "S$", rate: 1.35 },
-      ],
+    persist(
+        (set, get) => ({
+            selectedCurrency: "USD",
+            currencies: [
+                { code: "USD", name: "US Dollar", symbol: "$", rate: 1.0 },
+                { code: "EUR", name: "Euro", symbol: "€", rate: 0.85 },
+                { code: "GBP", name: "British Pound", symbol: "£", rate: 0.73 },
+                { code: "JPY", name: "Japanese Yen", symbol: "¥", rate: 110.0 },
+                { code: "CAD", name: "Canadian Dollar", symbol: "C$", rate: 1.25 },
+                { code: "AUD", name: "Australian Dollar", symbol: "A$", rate: 1.35 },
+                { code: "CHF", name: "Swiss Franc", symbol: "CHF", rate: 0.92 },
+                { code: "CNY", name: "Chinese Yuan", symbol: "¥", rate: 6.45 },
+                { code: "INR", name: "Indian Rupee", symbol: "₹", rate: 74.5 },
+                { code: "BDT", name: "Bangladeshi Taka", symbol: "৳", rate: 84.8 },
+                { code: "KRW", name: "South Korean Won", symbol: "₩", rate: 1180.0 },
+                { code: "SGD", name: "Singapore Dollar", symbol: "S$", rate: 1.35 },
+            ],
 
-      setCurrency: (currencyCode: string) => {
-        set({ selectedCurrency: currencyCode });
-      },
+            setCurrency: (currencyCode: string) => {
+                set({ selectedCurrency: currencyCode });
+            },
 
-      getCurrentCurrency: () => {
-        const state = get();
-        return (
-          state.currencies.find((c) => c.code === state.selectedCurrency) ||
-          state.currencies[0]
-        );
-      },
+            getCurrentCurrency: () => {
+                const state = get();
+                return (
+                    state.currencies.find((c) => c.code === state.selectedCurrency) ||
+                    state.currencies[0]
+                );
+            },
 
-      convertPrice: (price: number) => {
-        const state = get();
-        const currency = state.getCurrentCurrency();
-        return price * currency.rate;
-      },
-    }),
-    {
-      name: "currency-storage",
-      storage: createJSONStorage(() => localStorage),
-    }
-  )
+            convertPrice: (price: number) => {
+                const state = get();
+                const currency = state.getCurrentCurrency();
+                return price * currency.rate;
+            },
+        }),
+        {
+            name: "currency-storage",
+            storage: createJSONStorage(() => localStorage),
+        }
+    )
 );

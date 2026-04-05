@@ -43,14 +43,13 @@ interface OrderAddress {
 interface Order {
   _id: string;
   status: string;
-  paymentStatus?: string;
   paymentMethod?: string;
   items: OrderItem[];
   total: number;
   subtotal?: number;
   shipping?: number;
   tax?: number;
-  address?: OrderAddress;
+  shippingAddress?: OrderAddress;
   createdAt: string;
 }
 
@@ -102,14 +101,10 @@ const TIMELINE_STEPS = [
 ];
 
 // Map order status → which steps are "done"
-const getCompletedSteps = (status: string, paymentStatus?: string): string[] => {
-  const isPaid = paymentStatus === "paid" || status === "paid";
-
+const getCompletedSteps = (status: string): string[] => {
   switch (status) {
     case "pending":
-      return isPaid
-        ? ["order_placed", "address_confirmed", "order_confirmed"]
-        : ["order_placed"];
+      return ["order_placed"];
     case "paid":
       return ["order_placed", "address_confirmed", "order_confirmed"];
     case "processing":
@@ -124,10 +119,9 @@ const getCompletedSteps = (status: string, paymentStatus?: string): string[] => 
   }
 };
 
-const getActiveStep = (status: string, paymentStatus?: string): string => {
-  const isPaid = paymentStatus === "paid" || status === "paid";
-  if (status === "pending" && !isPaid) return "payment_pending";
-  if (status === "pending" && isPaid) return "order_confirmed";
+const getActiveStep = (status: string): string => {
+  if (status === "pending") return "payment_pending";
+  if (status === "paid") return "order_confirmed";
   if (status === "processing") return "order_packed";
   if (status === "shipped") return "out_for_delivery";
   if (status === "completed" || status === "delivered") return "delivered";
@@ -240,11 +234,10 @@ const OrderDetailPage = () => {
 
   const isPending =
     order.status === "pending" &&
-    order.paymentStatus !== "paid" &&
     order.paymentMethod !== "cod";
 
-  const completedSteps = getCompletedSteps(order.status, order.paymentStatus);
-  const activeStep = getActiveStep(order.status, order.paymentStatus);
+  const completedSteps = getCompletedSteps(order.status);
+  const activeStep = getActiveStep(order.status);
 
   const subtotal = order.subtotal ?? order.items.reduce((acc, i) => acc + i.price * i.quantity, 0);
   const shipping = order.shipping ?? 0;
@@ -283,15 +276,15 @@ const OrderDetailPage = () => {
 
             {/* Payment status badge */}
             <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border ${order.paymentStatus === "paid"
-                  ? "bg-green-50 text-green-700 border-green-200"
-                  : order.status === "cancelled"
-                    ? "bg-red-50 text-red-600 border-red-200"
-                    : "bg-yellow-50 text-yellow-700 border-yellow-200"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border ${order.status === "paid" || order.status === "completed"
+                ? "bg-green-50 text-green-700 border-green-200"
+                : order.status === "cancelled"
+                  ? "bg-red-50 text-red-600 border-red-200"
+                  : "bg-yellow-50 text-yellow-700 border-yellow-200"
                 }`}
             >
               <Clock className="w-3.5 h-3.5" />
-              {order.paymentStatus === "paid"
+              {order.status === "paid" || order.status === "completed"
                 ? "Payment Confirmed"
                 : order.status === "cancelled"
                   ? "Cancelled"
@@ -332,12 +325,12 @@ const OrderDetailPage = () => {
                   <div className="flex flex-col items-center">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 ${isDone
-                          ? "bg-green-500 text-white"
-                          : isActive
-                            ? step.isPayment
-                              ? "bg-red-100 text-red-500 border-2 border-red-300"
-                              : "bg-teal-100 text-teal-600 border-2 border-teal-300"
-                            : "bg-gray-100 text-gray-300 border border-gray-200"
+                        ? "bg-green-500 text-white"
+                        : isActive
+                          ? step.isPayment
+                            ? "bg-red-100 text-red-500 border-2 border-red-300"
+                            : "bg-teal-100 text-teal-600 border-2 border-teal-300"
+                          : "bg-gray-100 text-gray-300 border border-gray-200"
                         }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -355,12 +348,12 @@ const OrderDetailPage = () => {
                     <div>
                       <p
                         className={`text-sm font-medium ${isDone
-                            ? "text-green-600"
-                            : isActive
-                              ? step.isPayment
-                                ? "text-red-500"
-                                : "text-teal-600"
-                              : "text-gray-400"
+                          ? "text-green-600"
+                          : isActive
+                            ? step.isPayment
+                              ? "text-red-500"
+                              : "text-teal-600"
+                            : "text-gray-400"
                           }`}
                       >
                         {step.label}
@@ -450,7 +443,7 @@ const OrderDetailPage = () => {
         </div>
 
         {/* ── Delivery Address ── */}
-        {order.address && (
+        {order.shippingAddress && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <div className="flex items-center gap-2 mb-4">
               <MapPin className="w-5 h-5 text-teal-500" />
@@ -458,15 +451,14 @@ const OrderDetailPage = () => {
             </div>
 
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm text-gray-600 space-y-0.5">
-              <p className="font-medium text-gray-800">{order.address.street}</p>
+              <p className="font-medium text-gray-800">{order.shippingAddress.street}</p>
               <p>
-                {[order.address.state, order.address.city]
+                {[order.shippingAddress.city, order.shippingAddress.country]
                   .filter(Boolean)
                   .join(", ")}
               </p>
-              <p>{order.address.country}</p>
-              {order.address.postalCode && (
-                <p className="text-gray-400 text-xs">{order.address.postalCode}</p>
+              {order.shippingAddress.postalCode && (
+                <p className="text-gray-400 text-xs">Postal Code: {order.shippingAddress.postalCode}</p>
               )}
             </div>
           </div>

@@ -88,14 +88,16 @@ export interface Order {
     };
     items: OrderItem[];
     totalAmount: number;
-    status: OrderStatus;
+    status: OrderStatus | string;
     paymentStatus: PaymentStatus;
     paymentMethod?: string;
+    paidAt?: string;
     shippingAddress: {
         street: string;
         city: string;
         country: string;
         postalCode?: string;
+        zipCode?: string;
         state?: string;
     };
     createdAt: string;

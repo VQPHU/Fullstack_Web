@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "./ui/button";
-import { Bookmark, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard, LogOut, Package, ShoppingBag, Tag, User, Users } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard, LogOut, Package, ShoppingBag, Tag, User, Users } from "lucide-react";
 import useAuthStore from "@/store/useAuthStore";
 import { NavLink, useLocation } from "react-router";
 
@@ -35,7 +36,7 @@ const navigationItems = [
     icon: <Users size={20} />,
     label: "Users "
   },
-    {
+  {
     to: "/dashboard/orders",
     icon: <Package size={20} />,
     label: "Orders "
@@ -50,10 +51,13 @@ const navigationItems = [
     icon: <Layers size={20} />,
     label: "Banners",
   },
+];
+
+const productItems = [
   {
     to: "/dashboard/products",
-    icon: <ShoppingBag  size={20} />,
-    label: "products"
+    icon: <ShoppingBag size={20} />,
+    label: "Products"
   },
   {
     to: "/dashboard/categories",
@@ -114,7 +118,7 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
         </motion.div>
       </div >
       {/* Sidebar menu */}
-      <div className="flex flex-col flex-1 gap-1 p-3 bg-gradient-to-b from-slate-900/50 to-slate-800/50">
+      <div className="flex flex-col flex-1 gap-1 p-3 bg-gradient-to-b from-slate-900/50 to-slate-800/50 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900/20">
         {navigationItems?.map((item) => (
           <NavItem
             key={item?.to}
@@ -126,6 +130,35 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
             pathname={pathname}
           />
         ))}
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="product-catalog" className="border-none">
+            <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
+              <div className="flex items-center gap-3">
+                <ShoppingBag size={20} />
+                {open && "Product Catalog"}
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-0 px-2 py-1">
+              <div className="space-y-1 pb-3">
+                {productItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={cn(
+                      "flex items-center p-3 pl-8 rounded-lg text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm",
+                      pathname === item.to
+                        ? "bg-gradient-to-r from-[#29beb3]/20 to-[#a96bde]/20 text-white shadow-lg shadow-[#29beb3]/20 ring-1 ring-[#29beb3]/30 border border-white/10 backdrop-blur-sm"
+                        : "text-slate-300 hover:scale-102"
+                    )}
+                  >
+                    <span>{item.icon}</span>
+                    {open && item.label}
+                  </NavLink>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
       {/* Logout button */}
       <div className="p-4 border-t border-slate-600/50 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800">

@@ -405,7 +405,7 @@ const OrderDetailPage = () => {
             {order.items.map((item, i) => (
               <div
                 key={`${item.productId}-${i}`}
-                className="flex items-center gap-4 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition"
+                className="flex items-center gap-4 p-3 rounded-xl border border-gray-100 bg-gray-50 transition"
               >
                 {/* Image */}
                 <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center">

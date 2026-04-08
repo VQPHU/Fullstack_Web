@@ -29,6 +29,7 @@ const ProductActions: React.FC<ProductActionsProps> = ({ product }) => {
         <h1 className="text-2xl font-bold line-clamp-1">{product?.name}</h1>
         <div className="flex items-center gap-2">
           <WishlistButton
+            product={product}
             // product={product}
             className="border border-babyshopTextLight hover:border-babyshopSky"
           />

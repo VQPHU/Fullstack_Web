@@ -5,6 +5,7 @@ import React from 'react'
 import DiscountBadge from './DiscountBadge'
 import PriceContainer from './PriceContainer'
 import AddToCartButton from './AddToCartButton'
+import WishlistButton from './pages/product/WishlistButton'
 
 const ProductCard = ({ product }: { product: Product }) => {
     return (
@@ -26,16 +27,24 @@ const ProductCard = ({ product }: { product: Product }) => {
                 />
             </Link>
             {/* Wishlist Button */}
+            <WishlistButton
+                product={product}
+                className='absolute top-2 right-2 border'
+            />
             <hr />
             <div className="px-4 py-2 space-y-1">
-                <p className='className="uppercase text-xs font-medium text-babyshopTextLight'>
+                <p className='uppercase text-xs font-medium text-babyshopTextLight'>
                     {product?.category?.name}
                 </p>
-                <p className="line-clamp-2 text-sm h-10">{product?.name}</p>
+                <p className="line-clamp-2 h-10 font-medium text-base">{product?.name}</p>
                 <PriceContainer
                     price={product?.price}
                     discountPercentage={product?.discountPercentage}
                 />
+                <div className='flex items-center text-xs font-sans'>
+                    <p>In Stock: </p>
+                    <p className='text-babyshopSky'>{product?.stock}</p>
+                </div>
                 <AddToCartButton product={product} />
             </div>
         </div>

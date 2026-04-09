@@ -1,145 +1,92 @@
 "use client";
 
-import { useState } from "react";
-import { Trash2, ShoppingCart, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useCartStore, useUserStore, useWishlistStore } from "@/lib/store";
-import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 import { Product } from "@/types/type";
 import Image from "next/image";
+import Link from "next/link";
+
+import { Button } from "@/components/ui/button"; // Import Button để đồng bộ style
+import PriceContainer from "../common/PriceContainer";
+import DiscountBadge from "../common/DiscountBadge";
+import AddToCartButton from "../common/AddToCartButton";
 
 interface WishlistCardProps {
   product: Product;
   onRemove: (id: string) => void;
 }
 
-export default function WishlistCard({ product, onRemove }: WishlistCardProps) {
-  const router = useRouter();
-  const { addToCart } = useCartStore();
-  const { isAuthenticated } = useUserStore();
-  const [localLoading, setLocalLoading] = useState(false);
+const WishlistCard = ({ product, onRemove }: WishlistCardProps) => {
+  const handleRemove = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onRemove(product._id);
+  };
 
   const categoryName =
     typeof product.category === "string"
       ? product.category
       : product.category?.name;
 
-  const discountedPrice =
-    product.discountPercentage > 0
-      ? product.price * (1 - product.discountPercentage / 100)
-      : null;
-
-  const handleCardClick = () => {
-    router.push(`/product/${product._id}`);
-  };
-
-  const handleAddToCart = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (!isAuthenticated) {
-      toast.error("Please sign in to add items to your cart");
-      router.push("/auth/signin");
-      return;
-    }
-
-    setLocalLoading(true);
-    try {
-      await addToCart(product, 1);
-      toast.success("Added to cart successfully!", {
-        description: `${product.name}`,
-      });
-    } catch (error) {
-      console.error("Add to cart error:", error);
-      toast.error("Failed to add to cart. Please try again.");
-    } finally {
-      setLocalLoading(false);
-    }
-  };
-
-  const handleRemove = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onRemove(product._id);
-  };
-
   return (
-    <div
-      onClick={handleCardClick}
-      className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
-    >
-      {/* Image area */}
-      <div className="relative">
-        {product.discountPercentage > 0 && (
-          <span className="absolute top-3 left-3 z-10 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md">
-            -{product.discountPercentage}%
-          </span>
-        )}
-        <div className="relative h-52 bg-gray-50 overflow-hidden">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
-          />
-        </div>
-      </div>
+    <div className="border rounded-md group overflow-hidden w-full relative bg-white">
+      <Link
+        href={`/product/${product?._id}`}
+        className="p-2 overflow-hidden relative block"
+      >
+        <Image
+          src={product?.image}
+          width={500}
+          height={500}
+          alt="productImage"
+          className="w-full h-32 object-cover group-hover:scale-110 hoverEffect"
+        />
+        <DiscountBadge
+          discountPercentage={product?.discountPercentage}
+          className="absolute top-4 left-2"
+        />
+      </Link>
 
-      {/* Content */}
-      <div className="p-4">
-        {/* Category */}
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+      <hr />
+
+      <div className="px-4 py-2 space-y-1">
+        <p className="uppercase text-xs font-medium text-babyshopTextLight">
           {categoryName}
         </p>
+        <p className="line-clamp-2 h-10 font-medium text-base">
+          {product?.name}
+        </p>
+        
+        <PriceContainer
+          price={product?.price}
+          discountPercentage={product?.discountPercentage}
+        />
 
-        {/* Name */}
-        <h3 className="text-sm font-bold text-gray-800 mb-3 line-clamp-2 leading-snug">
-          {product.name}
-        </h3>
-
-        {/* Price */}
-        <div className="flex items-center gap-2 mb-4">
-          {discountedPrice ? (
-            <>
-              <span className="text-sm text-gray-400 line-through">
-                ${product.price.toFixed(2)}
-              </span>
-              <span className="text-sm font-bold text-red-500">
-                ${discountedPrice.toFixed(2)}
-              </span>
-            </>
-          ) : (
-            <span className="text-sm font-bold text-red-500">
-              ${product.price.toFixed(2)}
-            </span>
-          )}
+        <div className="flex items-center text-xs font-sans">
+          <p>In Stock: </p>
+          <p className="text-babyshopSky ml-1">{product?.stock}</p>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          <button
+        {/* Cụm nút bấm: Flex ngang */}
+        <div className="flex items-center gap-2 pt-2">
+          {/* Nút Xóa: Sử dụng chung variant outline và h-10 để khớp với AddToCartButton */}
+          <Button
+            variant="outline"
+            size="icon"
             onClick={handleRemove}
-            className="p-2 rounded-xl border border-gray-200 text-red-400 hover:bg-red-50 hover:border-red-200 transition-colors cursor-pointer"
+            className="rounded-full shrink-0 text-red-500 border-red-100 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
           >
-            <Trash2 size={16} />
-          </button>
-          <button
-            onClick={handleAddToCart}
-            disabled={localLoading}
-            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-60"
-          >
-            {localLoading ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Adding...
-              </>
-            ) : (
-              <>
-                <ShoppingCart size={16} />
-                Add to cart
-              </>
-            )}
-          </button>
+            <Trash2 className="w-4 h-4" />
+          </Button>
+
+          {/* Nút Add To Cart: Thêm flex-1 để nó chiếm phần còn lại */}
+          <AddToCartButton
+            product={product} 
+            className="flex-1 mt-0" // Bỏ mt-1 để căn thẳng hàng với nút xóa
+          />
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default WishlistCard;

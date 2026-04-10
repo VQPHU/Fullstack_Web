@@ -22,6 +22,7 @@ import authApi from "@/lib/authApi";
 import { createCheckoutSession } from "@/lib/stripe";
 import { toast } from "sonner";
 import Image from "next/image";
+import { deleteOrder, updateOrderStatus } from "@/lib/orderApi";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface OrderItem {
@@ -52,6 +53,46 @@ interface Order {
   shippingAddress?: OrderAddress;
   createdAt: string;
 }
+
+interface ConfirmDialogProps {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  confirmClassName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+const ConfirmDialog = ({
+  title,
+  description,
+  confirmLabel,
+  confirmClassName,
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
+    <div className="relative z-10 bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+      <h2 className="text-xl font-bold text-gray-900 mb-3">{title}</h2>
+      <p className="text-gray-500 text-sm leading-relaxed mb-8">{description}</p>
+      <div className="flex items-center justify-end gap-3">
+        <button
+          onClick={onCancel}
+          className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          className={`px-5 py-2.5 rounded-xl text-white font-medium text-sm transition-colors cursor-pointer ${confirmClassName}`}
+        >
+          {confirmLabel}
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 // ─── Timeline steps ───────────────────────────────────────────────────────────
 const TIMELINE_STEPS = [
@@ -140,6 +181,9 @@ const OrderDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [payingId, setPayingId] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!orderId || !auth_token) return;
@@ -204,21 +248,40 @@ const OrderDetailPage = () => {
 
   // ── Delete ──
   const handleDelete = async () => {
-    if (!order) return;
-    if (!confirm("Are you sure you want to delete this order?")) return;
+    if (!order || !auth_token) return;
+    setDeleteDialogOpen(false);
     setDeleting(true);
     try {
-      const res = await authApi.delete(`/orders/${order._id}`);
+      const res = await deleteOrder(order._id, auth_token);
       if (res.success) {
         toast.success("Order deleted");
         router.push("/user/orders");
       } else {
-        toast.error(res.error?.message || "Delete failed");
+        toast.error(res.message || "Delete failed");
       }
     } catch {
       toast.error("Delete failed");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!order || !auth_token) return;
+    setCancelDialogOpen(false);
+    setCancelling(true);
+    try {
+      const res = await updateOrderStatus(order._id, "cancelled", auth_token);
+      if (res.success) {
+        setOrder((prev) => (prev ? { ...prev, status: "cancelled" } : prev));
+        toast.success("Order cancelled");
+      } else {
+        toast.error(res.message || "Cancel failed");
+      }
+    } catch {
+      toast.error("Cancel failed");
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -539,7 +602,21 @@ const OrderDetailPage = () => {
           {order.status === "pending" && (
             <Button
               variant="destructive"
-              onClick={handleDelete}
+              onClick={() => setCancelDialogOpen(true)}
+              disabled={cancelling}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              {cancelling ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+              ) : null}
+              Cancel Order
+            </Button>
+          )}
+
+          {order.status === "cancelled" && (
+            <Button
+              variant="destructive"
+              onClick={() => setDeleteDialogOpen(true)}
               disabled={deleting}
               className="bg-red-500 hover:bg-red-600"
             >
@@ -551,6 +628,28 @@ const OrderDetailPage = () => {
           )}
         </div>
       </div>
+
+      {cancelDialogOpen && (
+        <ConfirmDialog
+          title="Cancel Order"
+          description="Are you sure you want to cancel this order? This action cannot be undone."
+          confirmLabel="Yes, Cancel Order"
+          confirmClassName="bg-orange-500 hover:bg-orange-600"
+          onConfirm={handleCancel}
+          onCancel={() => setCancelDialogOpen(false)}
+        />
+      )}
+
+      {deleteDialogOpen && (
+        <ConfirmDialog
+          title="Delete Order"
+          description="Are you sure you want to delete this order? This action cannot be undone and the order will be permanently removed."
+          confirmLabel="Yes, Delete Order"
+          confirmClassName="bg-red-600 hover:bg-red-700"
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteDialogOpen(false)}
+        />
+      )}
     </div>
   );
 };

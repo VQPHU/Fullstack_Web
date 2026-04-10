@@ -1,5 +1,36 @@
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000/api";
+  process.env.NEXT_PUBLIC_API_ENDPOINT ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:8000/api";
+
+const parseResponseBody = async <T>(response: Response): Promise<T | null> => {
+  const text = await response.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+};
+
+const buildApiError = (
+  response: Response,
+  fallbackMessage: string,
+  data?: any
+): Error => {
+  const messageFromBody =
+    data?.message || data?.error || data?.data?.message || data?.data?.error;
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    return new Error(
+      `${fallbackMessage}. API returned non-JSON response (status ${response.status}). Check NEXT_PUBLIC_API_ENDPOINT.`
+    );
+  }
+
+  return new Error(messageFromBody || fallbackMessage);
+};
 
 export interface OrderItem {
   productId: string;
@@ -65,18 +96,20 @@ export const createOrderFromCart = async (
         paymentMethod,
       }),
     });
+    const data = await parseResponseBody<any>(response);
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to create order");
+      throw buildApiError(response, "Failed to create order", data);
     }
 
-    const orderData = await response.json();
-    console.log("Order created successfully:", orderData);
+    if (!data) {
+      throw new Error("Failed to create order. Empty API response.");
+    }
+    console.log("Order created successfully:", data);
 
     return {
       success: true,
-      order: orderData.order || orderData,
+      order: data.order || data,
     };
   } catch (error) {
     console.error("Error creating order:", error);
@@ -97,12 +130,11 @@ export const getUserOrders = async (token: string): Promise<Order[]> => {
         Authorization: `Bearer ${token}`,
       },
     });
+    const data = await parseResponseBody<any>(response);
 
     if (!response.ok) {
-      throw new Error("Failed to fetch orders");
+      throw buildApiError(response, "Failed to fetch orders", data);
     }
-
-    const data = await response.json();
 
     if (Array.isArray(data)) {
       return data;
@@ -130,12 +162,13 @@ export const getOrderById = async (
         Authorization: `Bearer ${token}`,
       },
     });
+    const data = await parseResponseBody<Order>(response);
 
     if (!response.ok) {
-      throw new Error("Failed to fetch order");
+      throw buildApiError(response, "Failed to fetch order", data);
     }
 
-    return await response.json();
+    return data;
   } catch (error) {
     console.error("Error fetching order:", error);
     return null;
@@ -154,10 +187,10 @@ export const deleteOrder = async (
         Authorization: `Bearer ${token}`,
       },
     });
+    const data = await parseResponseBody<any>(response);
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to delete order");
+      throw buildApiError(response, "Failed to delete order", data);
     }
 
     return {
@@ -183,25 +216,42 @@ export const updateOrderStatus = async (
   stripeSessionId?: string
 ): Promise<{ success: boolean; order?: Order; message?: string }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
+    const body = JSON.stringify({
+      status,
+      paymentIntentId,
+      stripeSessionId,
+    });
+
+    let response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        status,
-        paymentIntentId,
-        stripeSessionId,
-      }),
+      body,
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to update order status");
+    // Backward-compat for current backend route
+    if (response.status === 404) {
+      response = await fetch(`${API_BASE_URL}/orders/${orderId}/webhook-status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body,
+      });
     }
 
-    const data = await response.json();
+    const data = await parseResponseBody<any>(response);
+
+    if (!response.ok) {
+      throw buildApiError(response, "Failed to update order status", data);
+    }
+
+    if (!data) {
+      throw new Error("Failed to update order status. Empty API response.");
+    }
     return {
       success: true,
       order: data.order,

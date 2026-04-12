@@ -20,6 +20,7 @@ import { createCheckoutSession } from "@/lib/stripe";
 import { toast } from "sonner";
 import { updateOrderStatus, deleteOrder } from "@/lib/orderApi";
 import Cookies from "js-cookie";
+import SubNavbar from "../header/SubNavbar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type FilterType = "all" | "pending" | "paid" | "completed" | "cancelled";
@@ -158,52 +159,52 @@ const UserOrdersPageClient = () => {
     };
 
     // ── Pay Now → Stripe Checkout ──
-    const handlePayNow = async (orderId: string) => {
-        if (!authUser) {
-            toast.error("User not authenticated");
-            return;
-        }
+    // const handlePayNow = async (orderId: string) => {
+    //     if (!authUser) {
+    //         toast.error("User not authenticated");
+    //         return;
+    //     }
 
-        const order = safeOrders.find((o) => o._id === orderId);
-        if (!order) {
-            toast.error("Order not found");
-            return;
-        }
+    //     const order = safeOrders.find((o) => o._id === orderId);
+    //     if (!order) {
+    //         toast.error("Order not found");
+    //         return;
+    //     }
 
-        setPayingId(orderId);
+    //     setPayingId(orderId);
 
-        try {
-            const lineItems = order.items?.map((item) => ({
-                name: item.name,
-                description: item.name,
-                amount: Math.round(item.price * 100),
-                currency: "usd",
-                quantity: item.quantity,
-            })) || [];
+    //     try {
+    //         const lineItems = order.items?.map((item) => ({
+    //             name: item.name,
+    //             description: item.name,
+    //             amount: Math.round(item.price * 100),
+    //             currency: "usd",
+    //             quantity: item.quantity,
+    //         })) || [];
 
-            const successUrl = `${window.location.origin}/user/orders`;
-            const cancelUrl = `${window.location.origin}/user/orders`;
+    //         const successUrl = `${window.location.origin}/user/orders`;
+    //         const cancelUrl = `${window.location.origin}/user/orders`;
 
-            const result = await createCheckoutSession({
-                items: lineItems,
-                successUrl,
-                cancelUrl,
-                customerEmail: authUser.email,
-                metadata: { orderId },
-            });
+    //         const result = await createCheckoutSession({
+    //             items: lineItems,
+    //             successUrl,
+    //             cancelUrl,
+    //             customerEmail: authUser.email,
+    //             metadata: { orderId },
+    //         });
 
-            if ("url" in result && result.url) {
-                window.location.href = result.url;
-            } else {
-                toast.error(result.error || "Failed to initiate Stripe checkout");
-                setPayingId(null);
-            }
-        } catch (error) {
-            toast.error("Payment failed. Please try again.");
-            console.error("Pay now error:", error);
-            setPayingId(null);
-        }
-    };
+    //         if ("url" in result && result.url) {
+    //             window.location.href = result.url;
+    //         } else {
+    //             toast.error(result.error || "Failed to initiate Stripe checkout");
+    //             setPayingId(null);
+    //         }
+    //     } catch (error) {
+    //         toast.error("Payment failed. Please try again.");
+    //         console.error("Pay now error:", error);
+    //         setPayingId(null);
+    //     }
+    // };
 
     const safeOrders = Array.isArray(orders) ? orders : [];
 
@@ -217,7 +218,7 @@ const UserOrdersPageClient = () => {
     return (
         <div className="min-h-screen bg-gray-50 p-4 md:p-8">
             <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-
+                <SubNavbar />
                 {/* ── Header ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
                     <div className="flex items-start justify-between">
@@ -356,7 +357,7 @@ const UserOrdersPageClient = () => {
                                         </button>
 
                                         {/* Pay Now - chỉ pending + card */}
-                                        {order.status === "pending" && order.paymentMethod !== "cod" && (
+                                        {/* {order.status === "pending" && order.paymentMethod !== "cod" && (
                                             <button
                                                 onClick={() => handlePayNow(order._id)}
                                                 disabled={payingId === order._id}
@@ -370,7 +371,7 @@ const UserOrdersPageClient = () => {
                                                 )}
                                                 Pay
                                             </button>
-                                        )}
+                                        )} */}
 
                                         {/* Cancel - chỉ pending */}
                                         {order.status === "pending" && (

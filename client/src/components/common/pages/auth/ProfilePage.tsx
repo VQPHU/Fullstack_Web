@@ -26,6 +26,7 @@ import {
 import authApi from "@/lib/authApi";
 import { useCartStore, useOrderStore, useUserStore } from "@/lib/store";
 import PriceFormatter from "@/components/common/PriceFormatter";
+import SubNavbar from "@/components/header/SubNavbar";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Address {
@@ -532,7 +533,7 @@ const ProfilePage = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-
+                <SubNavbar />
                 {/* ══ HEADER ══════════════════════════════════════════════════════════ */}
                 <div className="rounded-2xl overflow-hidden bg-linear-to-r from-teal-500 to-purple-500 p-6 text-white">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -642,8 +643,8 @@ const ProfilePage = () => {
                                         </div>
                                     </div>
                                     <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${isOAuth
-                                            ? "bg-orange-50 text-orange-600"
-                                            : "bg-green-50 text-green-600"
+                                        ? "bg-orange-50 text-orange-600"
+                                        : "bg-green-50 text-green-600"
                                         }`}>
                                         {isOAuth ? "Not Set" : "Set"}
                                     </span>
@@ -709,12 +710,12 @@ const ProfilePage = () => {
                                                     <div
                                                         key={i}
                                                         className={`h-1 flex-1 rounded-full transition-colors ${newPassword.length >= i * 2
-                                                                ? newPassword.length >= 8
-                                                                    ? "bg-green-400"
-                                                                    : newPassword.length >= 5
-                                                                        ? "bg-yellow-400"
-                                                                        : "bg-red-400"
-                                                                : "bg-gray-200"
+                                                            ? newPassword.length >= 8
+                                                                ? "bg-green-400"
+                                                                : newPassword.length >= 5
+                                                                    ? "bg-yellow-400"
+                                                                    : "bg-red-400"
+                                                            : "bg-gray-200"
                                                             }`}
                                                     />
                                                 ))}
@@ -990,12 +991,12 @@ const ProfilePage = () => {
                                                     </p>
                                                     <span
                                                         className={`text-xs px-2 py-0.5 rounded-full font-medium ${o.status === "completed"
-                                                                ? "bg-green-100 text-green-700"
-                                                                : o.status === "pending"
-                                                                    ? "bg-yellow-100 text-yellow-700"
-                                                                    : o.status === "cancelled"
-                                                                        ? "bg-red-100 text-red-600"
-                                                                        : "bg-blue-100 text-blue-700"
+                                                            ? "bg-green-100 text-green-700"
+                                                            : o.status === "pending"
+                                                                ? "bg-yellow-100 text-yellow-700"
+                                                                : o.status === "cancelled"
+                                                                    ? "bg-red-100 text-red-600"
+                                                                    : "bg-blue-100 text-blue-700"
                                                             }`}
                                                     >
                                                         {o.status}

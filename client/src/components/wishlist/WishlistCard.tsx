@@ -52,7 +52,7 @@ const WishlistCard = ({ product, onRemove }: WishlistCardProps) => {
         <p className="uppercase text-xs font-medium text-babyshopTextLight">
           {categoryName}
         </p>
-        <p className="line-clamp-2 h-10 font-medium text-base">
+        <p className="line-clamp-2 h-12 font-medium text-base">
           {product?.name}
         </p>
         

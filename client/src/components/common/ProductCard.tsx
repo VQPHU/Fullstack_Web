@@ -36,7 +36,7 @@ const ProductCard = ({ product }: { product: Product }) => {
                 <p className='uppercase text-xs font-medium text-babyshopTextLight'>
                     {product?.category?.name}
                 </p>
-                <p className="line-clamp-2 h-10 font-medium text-base">{product?.name}</p>
+                <p className="line-clamp-2 h-12 font-medium text-base">{product?.name}</p>
                 <PriceContainer
                     price={product?.price}
                     discountPercentage={product?.discountPercentage}

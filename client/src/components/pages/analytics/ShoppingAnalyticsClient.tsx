@@ -10,6 +10,7 @@ import MonthlySpendingChart from "./MonthlySpendingChart";
 import OrderStatusChart from "./OrderStatusChart";
 import CategoriesChart from "./CategoriesChart";
 import TopProductsTable from "./TopProductsTable";
+import SubNavbar from "@/components/header/SubNavbar";
 
 type TabId = "monthly" | "status" | "categories" | "products";
 
@@ -133,59 +134,68 @@ export default function ShoppingAnalyticsClient() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50/50">
       <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
+        {/* Tách SubNavbar ra ngoài hẳn */}
+        <SubNavbar />
 
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Shopping Analytics</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Track your shopping patterns and spending habits
-            </p>
+        {/* CÁI KHUNG LỚN DÒNG TOÀN BỘ NỘI DUNG SHOPPING ANALYTICS */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 md:p-8 space-y-8">
+          
+          {/* Header nằm trong khung */}
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+                Shopping Analytics
+              </h1>
+              <p className="text-[15px] text-gray-500">
+                Track your shopping patterns and spending habits
+              </p>
+            </div>
+            <button
+              onClick={fetchData}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Refresh
+            </button>
           </div>
-          <button
-            onClick={fetchData}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Refresh
-          </button>
-        </div>
 
-        {/* Stat Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {stats.map((s) => <StatCard key={s.title} {...s} />)}
-        </div>
-
-        {/* Tab bar + content */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          {/* Tab bar — nền xám, active trắng bo góc */}
-          <div className="flex bg-gray-100 p-1 gap-1 border-b border-gray-200">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-2 text-sm rounded-lg font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? "bg-white text-gray-900 shadow-sm font-semibold"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                {tab.label}
-              </button>
+          {/* Stat Cards nằm trong khung */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {stats.map((s) => (
+              <StatCard key={s.title} {...s} />
             ))}
           </div>
 
-          {/* Tab content */}
-          <div className="p-6">
-            {activeTab === "monthly"    && <MonthlySpendingChart data={data.monthlySpending} />}
-            {activeTab === "status"     && <OrderStatusChart data={data.orderStatusBreakdown} />}
-            {activeTab === "categories" && <CategoriesChart data={data.categoryBreakdown} />}
-            {activeTab === "products"   && <TopProductsTable data={data.topProducts} />}
-          </div>
-        </div>
+          {/* Tab bar + content nằm trong khung */}
+          <div className="space-y-6">
+            <div className="bg-gray-100 p-1.5 gap-1 border border-gray-200 rounded-xl flex">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 py-2 text-sm rounded-lg font-medium transition-all ${
+                    activeTab === tab.id
+                      ? "bg-white text-gray-900 shadow-sm font-semibold"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
+            {/* Content hiển thị biểu đồ */}
+            <div className="border border-gray-100 rounded-2xl p-4 md:p-6 bg-[#fcfcfc]">
+              {activeTab === "monthly"    && <MonthlySpendingChart data={data.monthlySpending} />}
+              {activeTab === "status"     && <OrderStatusChart data={data.orderStatusBreakdown} />}
+              {activeTab === "categories" && <CategoriesChart data={data.categoryBreakdown} />}
+              {activeTab === "products"   && <TopProductsTable data={data.topProducts} />}
+            </div>
+          </div>
+
+        </div> {/* Kết thúc Khung Lớn */}
       </div>
     </div>
   );

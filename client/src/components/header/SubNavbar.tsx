@@ -33,8 +33,7 @@ const AccountHeader = () => {
             <div className="w-full bg-white border border-slate-200 rounded-2xl p-2 shadow-sm flex items-center">
                 <div className="flex items-center gap-2">
                     {navItems.map((item) => {
-                        // Giả sử Profile đang active như trong ảnh
-                        const isActive = item.label === "Profile";
+                        const isActive = pathname === item.href;
 
 
                         return (

@@ -93,7 +93,7 @@ interface UserState {
     auth_token: string | null;
     isAuthenticated: boolean;
     hasHydrated: boolean;
-    updateUser: (user: User) => void;
+    updateUser: (user: Partial<User>) => void;
     setHasHydrated: (value: boolean) => void;
     syncAuthFromCookie: () => void;
     setAuthToken: (token: string | null) => void;
@@ -171,7 +171,12 @@ export const useUserStore = create<UserState>()(
             isAuthenticated: false,
             hasHydrated: false,
             updateUser: (user) => {
-                set({ authUser: user, isAuthenticated: true });
+                set((state) => ({
+                    authUser: state.authUser
+                        ? { ...state.authUser, ...user }
+                        : (user as User),
+                    isAuthenticated: true,
+                }));
             },
             setHasHydrated: (value) => {
                 set({ hasHydrated: value });

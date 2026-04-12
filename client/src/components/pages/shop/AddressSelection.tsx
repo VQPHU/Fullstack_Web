@@ -62,7 +62,7 @@ const AddressSelection: React.FC<AddressSelectionProps> = ({
         setIsLoading(true);
         try {
             const result = await addAddress(authUser._id, formData, auth_token);
-            onAddressesUpdate(result.addresses || []);
+            syncAddresses(result.addresses || []);
             toast.success(result.message);
             setIsAddDialogOpen(false);
             resetForm();
@@ -87,7 +87,7 @@ const AddressSelection: React.FC<AddressSelectionProps> = ({
                 formData,
                 auth_token
             );
-            onAddressesUpdate(result.addresses || []);
+            syncAddresses(result.addresses || []);
             toast.success(result.message);
             setIsEditDialogOpen(false);
             setEditingAddress(null);
@@ -107,7 +107,7 @@ const AddressSelection: React.FC<AddressSelectionProps> = ({
         setIsLoading(true);
         try {
             const result = await deleteAddress(authUser._id, addressId, auth_token);
-            onAddressesUpdate(result.addresses || []);
+            syncAddresses(result.addresses || []);
             toast.success(result.message);
         } catch (error) {
             toast.error(
@@ -130,7 +130,15 @@ const AddressSelection: React.FC<AddressSelectionProps> = ({
         setIsEditDialogOpen(true);
     };
 
-    const { authUser, auth_token } = useUserStore();
+    const { authUser, auth_token, updateUser } = useUserStore();
+
+    const syncAddresses = (updatedAddresses: Address[]) => {
+        onAddressesUpdate(updatedAddresses);
+        if (authUser) {
+            updateUser({ addresses: updatedAddresses });
+        }
+    };
+
     return <Card className="w-full">
         <CardHeader>
             <CardTitle>Shipping Address</CardTitle>

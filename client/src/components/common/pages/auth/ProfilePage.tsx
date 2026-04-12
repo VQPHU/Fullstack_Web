@@ -33,7 +33,6 @@ interface Address {
     _id: string;
     street: string;
     city: string;
-    state?: string;
     country: string;
     postalCode: string;
     isDefault: boolean;
@@ -41,7 +40,6 @@ interface Address {
 
 interface AddressForm {
     country: string;
-    state: string;
     city: string;
     street: string;
     postalCode: string;
@@ -50,7 +48,6 @@ interface AddressForm {
 
 const EMPTY_ADDRESS_FORM: AddressForm = {
     country: "",
-    state: "",
     city: "",
     street: "",
     postalCode: "",
@@ -84,6 +81,7 @@ function AddressDrawer({
     initial?: AddressForm;
     loading: boolean;
 }) {
+    const { hasHydrated } = useUserStore();
     const [form, setForm] = useState<AddressForm>(initial ?? EMPTY_ADDRESS_FORM);
 
     useEffect(() => {
@@ -101,6 +99,8 @@ function AddressDrawer({
         if (!form.postalCode.trim()) return toast.error("Postal code is required");
         await onSave(form);
     };
+
+    if (!hasHydrated) return null;
 
     return (
         <>
@@ -171,17 +171,6 @@ function AddressDrawer({
                                 </option>
                             ))}
                         </select>
-                    </div>
-
-                    {/* State */}
-                    <div className="space-y-1">
-                        <Label>State / Province (Optional)</Label>
-                        <Input
-                            value={form.state}
-                            onChange={(e) => set("state", e.target.value)}
-                            placeholder="e.g., California, Dhaka, Maharashtra"
-                            className="focus:ring-teal-400"
-                        />
                     </div>
 
                     {/* City */}
@@ -270,7 +259,7 @@ function AddressDrawer({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const ProfilePage = () => {
     const router = useRouter();
-    const { authUser, auth_token, updateUser, logoutUser } = useUserStore();
+    const { authUser, auth_token, hasHydrated, updateUser, logoutUser } = useUserStore();
     const { cartItemsWithQuantities } = useCartStore();
     const { orders, loadOrders, isLoading: ordersLoading } = useOrderStore();
 
@@ -300,6 +289,7 @@ const ProfilePage = () => {
 
     // ── Init ──
     useEffect(() => {
+        if (!hasHydrated) return;
         if (!authUser || !auth_token) {
             router.push("/auth/signin");
             return;
@@ -307,7 +297,7 @@ const ProfilePage = () => {
         setName(authUser.name || "");
         setAvatarUrl(authUser.avatar || "");
         loadOrders(auth_token);
-    }, [authUser, auth_token]);
+    }, [authUser, auth_token, hasHydrated, loadOrders, router]);
 
     const cartTotal = useMemo(
         () =>
@@ -440,7 +430,6 @@ const ProfilePage = () => {
         setEditingAddress({
             _id: addr._id,
             country: addr.country,
-            state: addr.state || "",
             city: addr.city,
             street: addr.street,
             postalCode: addr.postalCode,
@@ -878,7 +867,7 @@ const ProfilePage = () => {
                                                         {addr.street}
                                                     </p>
                                                     <p className="text-xs text-gray-500">
-                                                        {[addr.state, addr.city, addr.country]
+                                                        {[addr.city, addr.country]
                                                             .filter(Boolean)
                                                             .join(", ")}
                                                     </p>

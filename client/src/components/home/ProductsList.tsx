@@ -1,21 +1,32 @@
+"use client";
+
 import { fetchData } from '@/lib/api';
 import { Product } from '@/types/type'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import ProductCard from '../common/ProductCard';
 
 
 interface ProductsResponse {
   products: Product[];
+  total: number;
 }
 
-const ProductsList = async () => {
-  let products: Product[] = [];
-  try {
-    const data = await fetchData<ProductsResponse>("/products?perPage=10");
-    products = data.products;
-  } catch (error) {
-    console.log("Product fetching Error:", error);
-  }
+const ProductsList = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const getProducts = async () => {
+      try {
+        // Đổi perPage thành limit để khớp với định nghĩa ở Backend
+        const data = await fetchData<ProductsResponse>("/products?limit=10");
+        setProducts(data.products);
+      } catch (error) {
+        console.log("Product fetching Error:", error);
+      }
+    };
+
+    getProducts();
+  }, []);
 
   if (products?.length === 0) {
     return (

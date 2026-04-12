@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler";
 import Order from "../models/orderModel.js";
+import Product from "../models/productModel.js";
 import cloudinary from "../config/cloudinary.js";
 
 
@@ -116,6 +117,19 @@ export const createOrderFromCart = asyncHandler(async (req, res) => {
         };
     });
 
+    // Check stock availability and decrease stock
+    for (const item of validItems) {
+        const product = await Product.findById(item.productId);
+        if (!product) {
+            res.status(404);
+            throw new Error(`Product not found: ${item.name}`);
+        }
+        if (product.stock < item.quantity) {
+            res.status(400);
+            throw new Error(`Insufficient stock for product: ${item.name}`);
+        }
+    }
+
     // Calculate total 
     const total = validItems.reduce((acc, item) => {
         return acc + item.price * item.quantity;
@@ -131,6 +145,13 @@ export const createOrderFromCart = asyncHandler(async (req, res) => {
         paymentMethod,
         shippingAddress,
     });
+
+    // Decrease stock after order creation
+    for (const item of validItems) {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { stock: -item.quantity }
+        });
+    }
 
     res.status(201).json({
         success: true,
@@ -244,11 +265,14 @@ export const deleteOrder = asyncHandler(async (req, res) => {
         throw new Error("Not authorized to delete this order");
     }
 
-    // Only allow deletion if order is still pending 
-    // if(order.status !== "pending") {
-    // res.status(400);
-    // throw new Error("Cannot delete order that has been processed");
-    // }
+    // Nếu đơn hàng chưa bị hủy, cần hoàn lại kho trước khi xóa hoàn toàn
+    if (order.status !== "cancelled") {
+        for (const item of order.items) {
+            await Product.findByIdAndUpdate(item.productId, {
+                $inc: { stock: item.quantity }
+            });
+        }
+    }
 
     await Order.findByIdAndDelete(req.params.id);
 
@@ -289,15 +313,17 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     }
 
     // Check authorization based on order status and user role
-    // - User can update their own orders to "paid" if status is "pending"
+    // - User can update their own orders to "paid" or "cancelled" if status is "pending"
     // - Admins can update any order at any time
     // - Webhook calls (no req.user) are always allowed
     if (req.user) {
         const isOwner = order.userId.toString() === req.user._id.toString();
         const isAdmin = req.user.role === "admin";
 
-        // Allow if admin or (owner and updating to paid from pending)
-        if (!isAdmin && !(isOwner && status === "paid" && order.status === "pending")) {
+        // Allow if admin or (owner and updating to paid/cancelled from pending)
+        const isAllowedUserAction = isOwner && (status === "paid" || status === "cancelled") && order.status === "pending";
+
+        if (!isAdmin && !isAllowedUserAction) {
             res.status(403);
             throw new Error("Not authorized to update this order");
         }
@@ -318,6 +344,15 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
             updateData.stripeSessionId = stripeSessionId;
         }
         updateData.paidAt = new Date();
+    }
+
+    // If status is being changed to cancelled, restore stock
+    if (status === "cancelled" && order.status !== "cancelled") {
+        for (const item of order.items) {
+            await Product.findByIdAndUpdate(item.productId, {
+                $inc: { stock: item.quantity }
+            });
+        }
     }
 
     // Use findByIdAndUpdate to avoid full document validation 

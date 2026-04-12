@@ -215,7 +215,7 @@ const updateAddress = asyncHandler(async (req, res) => {
 
     res.json({
         success: true,
-        addAddress: user.addresses,
+        addresses: user.addresses,
         message: "Address updated successfully",
     });
 });

@@ -92,7 +92,10 @@ interface UserState {
     authLoading: boolean;
     auth_token: string | null;
     isAuthenticated: boolean;
+    hasHydrated: boolean;
     updateUser: (user: User) => void;
+    setHasHydrated: (value: boolean) => void;
+    syncAuthFromCookie: () => void;
     setAuthToken: (token: string | null) => void;
     logoutUser: () => void;
     verifyAuth: () => Promise<void>;
@@ -164,10 +167,21 @@ export const useUserStore = create<UserState>()(
         (set, get) => ({
             authUser: null,
             authLoading: false,
-            auth_token: Cookies.get("auth_token") || null,
-            isAuthenticated: !!Cookies.get("auth_token"),
+            auth_token: null,
+            isAuthenticated: false,
+            hasHydrated: false,
             updateUser: (user) => {
                 set({ authUser: user, isAuthenticated: true });
+            },
+            setHasHydrated: (value) => {
+                set({ hasHydrated: value });
+            },
+            syncAuthFromCookie: () => {
+                const token = Cookies.get("auth_token") || null;
+                set({
+                    auth_token: token,
+                    isAuthenticated: !!token,
+                });
             },
             setAuthToken: (token) => {
                 if (token) {
@@ -176,14 +190,19 @@ export const useUserStore = create<UserState>()(
                         secure: process.env.NODE_ENV === "production",
                         sameSite: "lax",
                     });
-                    set({ auth_token: token, isAuthenticated: true });
+                    set({ auth_token: token, isAuthenticated: true, hasHydrated: true });
 
                     setTimeout(() => {
                         loadAllUserData(token);
                     }, 150);
                 } else {
                     Cookies.remove("auth_token");
-                    set({ auth_token: null, isAuthenticated: false, authUser: null });
+                    set({
+                        auth_token: null,
+                        isAuthenticated: false,
+                        authUser: null,
+                        hasHydrated: true,
+                    });
                 }
             },
 
@@ -229,7 +248,12 @@ export const useUserStore = create<UserState>()(
             },
             logoutUser: async () => {
                 Cookies.remove("auth_token");
-                set({ authUser: null, auth_token: null, isAuthenticated: false });
+                set({
+                    authUser: null,
+                    auth_token: null,
+                    isAuthenticated: false,
+                    hasHydrated: true,
+                });
 
                 // Clear wishlist, cart, and orders on logout using dynamic imports
                 try {
@@ -257,7 +281,12 @@ export const useUserStore = create<UserState>()(
                 const token = Cookies.get("auth_token");
 
                 if (!token) {
-                    set({ isAuthenticated: false, authUser: null, auth_token: null });
+                    set({
+                        isAuthenticated: false,
+                        authUser: null,
+                        auth_token: null,
+                        hasHydrated: true,
+                    });
                     return;
                 }
 
@@ -274,6 +303,7 @@ export const useUserStore = create<UserState>()(
                             authUser: response.data,
                             isAuthenticated: true,
                             auth_token: token,
+                            hasHydrated: true,
                         });
 
                         try {
@@ -309,7 +339,12 @@ export const useUserStore = create<UserState>()(
                 } catch (error) {
                     console.error("Store: Verify auth error:", error);
                     Cookies.remove("auth_token");
-                    set({ authUser: null, auth_token: null, isAuthenticated: false });
+                    set({
+                        authUser: null,
+                        auth_token: null,
+                        isAuthenticated: false,
+                        hasHydrated: true,
+                    });
                 }
             },
             register: async (data) => {
@@ -328,6 +363,10 @@ export const useUserStore = create<UserState>()(
         {
             name: "user-storage",
             storage: createJSONStorage(() => localStorage),
+            onRehydrateStorage: () => (state) => {
+                state?.syncAuthFromCookie();
+                state?.setHasHydrated(true);
+            },
         }
     )
 )
@@ -524,12 +563,12 @@ export const useOrderStore = create<OrderState>()(
                 set({ isLoading: true });
                 try {
                     const { getUserOrders } = await import("./orderApi");
-                    const res = await getUserOrders(token) as any;
+                    const res = await getUserOrders(token);
 
                     console.log("API orders:", res); // 🔥 debug
 
                     set({
-                        orders: Array.isArray(res) ? res : res.orders || res.data || [],
+                        orders: res,
                         isLoading: false,
                     });
                 } catch (error) {

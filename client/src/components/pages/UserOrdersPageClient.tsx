@@ -195,7 +195,7 @@ const UserOrdersPageClient = () => {
             if ("url" in result && result.url) {
                 window.location.href = result.url;
             } else {
-                toast.error((result as any).error || "Failed to initiate Stripe checkout");
+                toast.error(result.error || "Failed to initiate Stripe checkout");
                 setPayingId(null);
             }
         } catch (error) {
@@ -216,7 +216,7 @@ const UserOrdersPageClient = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
 
                 {/* ── Header ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
@@ -273,7 +273,7 @@ const UserOrdersPageClient = () => {
                         </div>
                         <h3 className="text-lg font-semibold text-gray-800 mb-1">No Orders Yet</h3>
                         <p className="text-sm text-gray-500 mb-6">
-                            You haven't placed any orders yet.
+                            You haven&apos;t placed any orders yet.
                         </p>
                         <Button
                             className="bg-gray-900 hover:bg-gray-800 text-white px-8"

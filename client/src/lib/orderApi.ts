@@ -14,10 +14,22 @@ const parseResponseBody = async <T>(response: Response): Promise<T | null> => {
   }
 };
 
+type ApiBody = {
+  message?: string;
+  error?: string;
+  data?: {
+    message?: string;
+    error?: string;
+    orders?: Order[];
+  };
+  orders?: Order[];
+  order?: Order;
+};
+
 const buildApiError = (
   response: Response,
   fallbackMessage: string,
-  data?: any
+  data?: ApiBody | null
 ): Error => {
   const messageFromBody =
     data?.message || data?.error || data?.data?.message || data?.data?.error;
@@ -96,7 +108,7 @@ export const createOrderFromCart = async (
         paymentMethod,
       }),
     });
-    const data = await parseResponseBody<any>(response);
+    const data = await parseResponseBody<ApiBody>(response);
 
     if (!response.ok) {
       throw buildApiError(response, "Failed to create order", data);
@@ -130,7 +142,7 @@ export const getUserOrders = async (token: string): Promise<Order[]> => {
         Authorization: `Bearer ${token}`,
       },
     });
-    const data = await parseResponseBody<any>(response);
+    const data = await parseResponseBody<ApiBody>(response);
 
     if (!response.ok) {
       throw buildApiError(response, "Failed to fetch orders", data);
@@ -187,7 +199,7 @@ export const deleteOrder = async (
         Authorization: `Bearer ${token}`,
       },
     });
-    const data = await parseResponseBody<any>(response);
+    const data = await parseResponseBody<ApiBody>(response);
 
     if (!response.ok) {
       throw buildApiError(response, "Failed to delete order", data);
@@ -243,7 +255,7 @@ export const updateOrderStatus = async (
       });
     }
 
-    const data = await parseResponseBody<any>(response);
+    const data = await parseResponseBody<ApiBody>(response);
 
     if (!response.ok) {
       throw buildApiError(response, "Failed to update order status", data);

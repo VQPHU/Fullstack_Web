@@ -112,11 +112,11 @@ const UserButton = () => {
                 Orders
               </MenuItem>
 
-              <MenuItem icon={<Heart size={18} />}>
+              <MenuItem href="/user/wishlist" icon={<Heart size={18} />}>
                 Wishlist
               </MenuItem>
 
-              <MenuItem icon={<Bell size={18} />}>
+              <MenuItem href="/user/analytics" icon={<Bell size={18} />}>
                 Notifications
               </MenuItem>
 

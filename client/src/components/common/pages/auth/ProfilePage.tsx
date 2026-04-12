@@ -465,7 +465,7 @@ const ProfilePage = () => {
             }
 
             if (res.success) {
-                updateUser({ ...(authUser as any), addresses: res.data.addresses });
+                updateUser({ ...authUser, addresses: res.data.addresses });
                 toast.success(editingAddress?._id ? "Address updated" : "Address added");
                 setDrawerOpen(false);
             } else {
@@ -489,7 +489,7 @@ const ProfilePage = () => {
             );
 
             if (res.success) {
-                updateUser({ ...(authUser as any), addresses: res.data.addresses });
+                updateUser({ ...authUser, addresses: res.data.addresses });
                 toast.success("Address deleted");
             } else {
                 toast.error(res.error?.message || "Delete failed");
@@ -511,7 +511,7 @@ const ProfilePage = () => {
             );
 
             if (res.success) {
-                updateUser({ ...(authUser as any), addresses: res.data.addresses });
+                updateUser({ ...authUser, addresses: res.data.addresses });
                 toast.success("Default address updated");
             } else {
                 toast.error(res.error?.message || "Failed");

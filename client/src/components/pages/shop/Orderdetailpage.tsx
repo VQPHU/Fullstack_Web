@@ -236,7 +236,7 @@ const OrderDetailPage = () => {
       if ("url" in result && result.url) {
         window.location.href = result.url;
       } else {
-        toast.error((result as any).error || "Failed to create checkout session");
+        toast.error(result.error || "Failed to create checkout session");
       }
     } catch (error) {
       console.error("Pay now error:", error);
@@ -308,7 +308,7 @@ const OrderDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-3xl mx-auto space-y-5">
+      <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
 
         {/* Back */}
         <button

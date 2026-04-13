@@ -43,10 +43,10 @@ const SuccessPageClient = () => {
                         }
                     );
 
-                    console.log("Thanh toán thành công & Đã cập nhật DB");
+                    console.log("Payment successful & DB updated");
                     clearCart();
                 } catch (error) {
-                    console.error("Lỗi cập nhật đơn hàng sau thanh toán:", error);
+                    console.error("Error updating order after payment:", error);
                     hasCalledAPI.current = false;
                 }
             }
@@ -67,9 +67,15 @@ const SuccessPageClient = () => {
                     </div>
                 </div>
 
-                <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Thanh toán thành công!</h1>
+                <h1 className="text-3xl font-extrabold text-gray-900 mb-2">
+                    Payment Successful!
+                </h1>
                 <p className="text-gray-600 mb-8">
-                    Cảm ơn bạn đã mua sắm. Đơn hàng <span className="font-mono font-bold text-blue-600">#{orderId?.slice(-6).toUpperCase()}</span> của bạn đang được vận chuyển.
+                    Thank you for your purchase. Your order{" "}
+                    <span className="font-mono font-bold text-blue-600">
+                        #{orderId?.slice(-6).toUpperCase()}
+                    </span>{" "}
+                    is being processed for shipping.
                 </p>
 
                 <div className="space-y-3">
@@ -78,17 +84,23 @@ const SuccessPageClient = () => {
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-full py-6 text-lg font-medium transition-all"
                     >
                         <ShoppingBag className="w-5 h-5 mr-2" />
-                        Xem đơn hàng của tôi
+                        View My Orders
                     </Button>
 
-                    <Button variant="ghost" onClick={() => router.push("/")} className="w-full text-gray-500 hover:text-gray-900">
-                        Tiếp tục mua sắm
+                    <Button
+                        variant="ghost"
+                        onClick={() => router.push("/")}
+                        className="w-full text-gray-500 hover:text-gray-900"
+                    >
+                        Continue Shopping
                         <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-gray-50">
-                    <p className="text-xs text-gray-400">Hệ thống đang cập nhật trạng thái đơn hàng của bạn...</p>
+                    <p className="text-xs text-gray-400">
+                        The system is updating your order status...
+                    </p>
                 </div>
             </div>
         </Container>

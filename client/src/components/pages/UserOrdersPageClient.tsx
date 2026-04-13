@@ -15,7 +15,6 @@ import {
     XCircle,
 } from "lucide-react";
 import PriceFormatter from "@/components/common/PriceFormatter";
-import authApi from "@/lib/authApi";
 import { createCheckoutSession } from "@/lib/stripe";
 import { toast } from "sonner";
 import { updateOrderStatus, deleteOrder } from "@/lib/orderApi";
@@ -80,9 +79,10 @@ const statusBadge = (status: string) => {
     }
 };
 
-const paymentBadge = (status: string) => {
+const paymentColor = (status: string) => {
     switch (status) {
         case "paid":
+        case "completed":
             return "text-green-600";
         case "cancelled":
             return "text-red-500";
@@ -100,10 +100,8 @@ const UserOrdersPageClient = () => {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [cancellingId, setCancellingId] = useState<string | null>(null);
     const [payingId, setPayingId] = useState<string | null>(null);
-
-    // Dialog state
-    const [cancelDialog, setCancelDialog] = useState<string | null>(null); // orderId
-    const [deleteDialog, setDeleteDialog] = useState<string | null>(null); // orderId
+    const [cancelDialog, setCancelDialog] = useState<string | null>(null);
+    const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -118,7 +116,7 @@ const UserOrdersPageClient = () => {
         toast.success("Orders refreshed");
     };
 
-    // ── Cancel order → status = cancelled ──
+    // ── Cancel ──
     const handleCancel = async (orderId: string) => {
         const token = Cookies.get("auth_token") ?? auth_token ?? "";
         setCancellingId(orderId);
@@ -138,7 +136,7 @@ const UserOrdersPageClient = () => {
         }
     };
 
-    // ── Delete order (only cancelled) ──
+    // ── Delete ──
     const handleDelete = async (orderId: string) => {
         const token = Cookies.get("auth_token") ?? auth_token ?? "";
         setDeletingId(orderId);
@@ -159,68 +157,64 @@ const UserOrdersPageClient = () => {
     };
 
     // ── Pay Now → Stripe Checkout ──
-    // const handlePayNow = async (orderId: string) => {
-    //     if (!authUser) {
-    //         toast.error("User not authenticated");
-    //         return;
-    //     }
+    const handlePayNow = async (orderId: string) => {
+        if (!authUser) {
+            toast.error("User not authenticated");
+            return;
+        }
 
-    //     const order = safeOrders.find((o) => o._id === orderId);
-    //     if (!order) {
-    //         toast.error("Order not found");
-    //         return;
-    //     }
+        const order = safeOrders.find((o) => o._id === orderId);
+        if (!order) {
+            toast.error("Order not found");
+            return;
+        }
 
-    //     setPayingId(orderId);
+        setPayingId(orderId);
 
-    //     try {
-    //         const lineItems = order.items?.map((item) => ({
-    //             name: item.name,
-    //             description: item.name,
-    //             amount: Math.round(item.price * 100),
-    //             currency: "usd",
-    //             quantity: item.quantity,
-    //         })) || [];
+        try {
+            const lineItems = order.items?.map((item) => ({
+                name: item.name,
+                description: item.name,
+                amount: Math.round(item.price * 100), // cents
+                currency: "usd",
+                quantity: item.quantity,
+                images: item.image ? [item.image] : [],
+            })) || [];
 
-    //         const successUrl = `${window.location.origin}/user/orders`;
-    //         const cancelUrl = `${window.location.origin}/user/orders`;
+            const result = await createCheckoutSession({
+                items: lineItems,
+                successUrl: `${window.location.origin}/success?orderId=${orderId}`,
+                cancelUrl: `${window.location.origin}/user/orders`,
+                customerEmail: authUser.email,
+                metadata: { orderId },
+            });
 
-    //         const result = await createCheckoutSession({
-    //             items: lineItems,
-    //             successUrl,
-    //             cancelUrl,
-    //             customerEmail: authUser.email,
-    //             metadata: { orderId },
-    //         });
-
-    //         if ("url" in result && result.url) {
-    //             window.location.href = result.url;
-    //         } else {
-    //             toast.error(result.error || "Failed to initiate Stripe checkout");
-    //             setPayingId(null);
-    //         }
-    //     } catch (error) {
-    //         toast.error("Payment failed. Please try again.");
-    //         console.error("Pay now error:", error);
-    //         setPayingId(null);
-    //     }
-    // };
+            if ("url" in result && result.url) {
+                window.location.href = result.url;
+            } else {
+                toast.error("error" in result ? result.error : "Failed to initiate checkout");
+                setPayingId(null);
+            }
+        } catch (error) {
+            toast.error("Payment failed. Please try again.");
+            console.error("Pay now error:", error);
+            setPayingId(null);
+        }
+    };
 
     const safeOrders = Array.isArray(orders) ? orders : [];
-
-    const filteredOrders = safeOrders.filter((o) => {
-        if (filter === "all") return true;
-        return o.status === filter;
-    });
-
+    const filteredOrders = safeOrders.filter((o) =>
+        filter === "all" ? true : o.status === filter
+    );
     const FILTERS: FilterType[] = ["all", "pending", "paid", "completed", "cancelled"];
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+        <div className="min-h-screen bg-gray-50">
             <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
                 <SubNavbar />
+
                 {/* ── Header ── */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                     <div className="flex items-start justify-between">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
@@ -247,8 +241,8 @@ const UserOrdersPageClient = () => {
                                 key={f}
                                 onClick={() => setFilter(f)}
                                 className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${filter === f
-                                    ? "bg-gray-900 text-white border-gray-900"
-                                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                        ? "bg-gray-900 text-white border-gray-900"
+                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                                     }`}
                             >
                                 {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
@@ -286,9 +280,9 @@ const UserOrdersPageClient = () => {
                 ) : (
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                         {/* Table header */}
-                        <div className="grid grid-cols-7 gap-4 px-6 py-3 border-b border-gray-100 bg-gray-50/80 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        <div className="grid grid-cols-[1fr_1.4fr_0.7fr_0.8fr_0.9fr_1fr_1.4fr] gap-3 px-6 py-3 border-b border-gray-100 bg-gray-50/80 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                             <div>Order ID</div>
-                            <div className="col-span-1">Date</div>
+                            <div>Date</div>
                             <div>Items</div>
                             <div>Total</div>
                             <div>Status</div>
@@ -301,16 +295,16 @@ const UserOrdersPageClient = () => {
                             {filteredOrders.map((order) => (
                                 <div
                                     key={order._id}
-                                    className="grid grid-cols-7 gap-4 px-6 py-4 items-center hover:bg-gray-50/50 transition"
+                                    className="grid grid-cols-[1fr_1.4fr_0.7fr_0.8fr_0.9fr_1fr_1.4fr] gap-3 px-6 py-4 items-center hover:bg-gray-50/50 transition"
                                 >
                                     {/* Order ID */}
-                                    <div className="text-sm font-medium text-gray-700">
+                                    <div className="text-sm font-medium text-gray-700 truncate">
                                         {order._id.slice(-8)}
                                     </div>
 
                                     {/* Date */}
-                                    <div className="flex items-center gap-1.5 text-sm text-gray-500 col-span-1">
-                                        <Calendar className="w-3.5 h-3.5 shrink-0" />
+                                    <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                                        <Calendar className="w-3.5 h-3.5 shrink-0 text-gray-400" />
                                         {new Date(order.createdAt).toLocaleDateString("en-US", {
                                             month: "short",
                                             day: "numeric",
@@ -320,7 +314,8 @@ const UserOrdersPageClient = () => {
 
                                     {/* Items */}
                                     <div className="text-sm text-gray-600">
-                                        {order.items?.length ?? 0} items
+                                        {order.items?.length ?? 0}{" "}
+                                        {order.items?.length === 1 ? "item" : "items"}
                                     </div>
 
                                     {/* Total */}
@@ -328,7 +323,7 @@ const UserOrdersPageClient = () => {
                                         <PriceFormatter amount={order.total} />
                                     </div>
 
-                                    {/* Status */}
+                                    {/* Status badge */}
                                     <div>
                                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusBadge(order.status)}`}>
                                             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
@@ -336,7 +331,7 @@ const UserOrdersPageClient = () => {
                                     </div>
 
                                     {/* Payment */}
-                                    <div className={`flex items-center gap-1.5 text-sm ${paymentBadge(order.status)}`}>
+                                    <div className={`flex items-center gap-1.5 text-sm ${paymentColor(order.status)}`}>
                                         <CreditCard className="w-3.5 h-3.5 shrink-0" />
                                         {order.paymentMethod === "cod"
                                             ? "COD"
@@ -350,18 +345,18 @@ const UserOrdersPageClient = () => {
                                         {/* View */}
                                         <button
                                             onClick={() => router.push(`/user/orders/${order._id}`)}
-                                            className="w-8 h-8 rounded-lg border border-teal-400 text-teal-500 flex items-center justify-center hover:bg-teal-50 transition"
+                                            className="w-8 h-8 rounded-lg border border-teal-400 text-teal-500 flex items-center justify-center hover:bg-teal-50 transition shrink-0"
                                             title="View detail"
                                         >
                                             <Eye className="w-4 h-4" />
                                         </button>
 
-                                        {/* Pay Now - chỉ pending + card */}
-                                        {/* {order.status === "pending" && order.paymentMethod !== "cod" && (
+                                        {/* Pay Now — chỉ pending + không phải COD */}
+                                        {order.status === "pending" && order.paymentMethod !== "cod" && (
                                             <button
                                                 onClick={() => handlePayNow(order._id)}
                                                 disabled={payingId === order._id}
-                                                className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-xs font-medium transition disabled:opacity-60"
+                                                className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold transition disabled:opacity-60 shrink-0"
                                                 title="Pay now"
                                             >
                                                 {payingId === order._id ? (
@@ -369,16 +364,16 @@ const UserOrdersPageClient = () => {
                                                 ) : (
                                                     <CreditCard className="w-3.5 h-3.5" />
                                                 )}
-                                                Pay
+                                                Pay Now
                                             </button>
-                                        )} */}
+                                        )}
 
-                                        {/* Cancel - chỉ pending */}
+                                        {/* Cancel — chỉ pending */}
                                         {order.status === "pending" && (
                                             <button
                                                 onClick={() => setCancelDialog(order._id)}
                                                 disabled={cancellingId === order._id}
-                                                className="w-8 h-8 rounded-lg border border-orange-400 text-orange-500 flex items-center justify-center hover:bg-orange-50 transition disabled:opacity-60"
+                                                className="w-8 h-8 rounded-lg border border-orange-400 text-orange-500 flex items-center justify-center hover:bg-orange-50 transition disabled:opacity-60 shrink-0"
                                                 title="Cancel order"
                                             >
                                                 {cancellingId === order._id ? (
@@ -389,12 +384,12 @@ const UserOrdersPageClient = () => {
                                             </button>
                                         )}
 
-                                        {/* Delete - chỉ cancelled */}
+                                        {/* Delete — chỉ cancelled */}
                                         {order.status === "cancelled" && (
                                             <button
                                                 onClick={() => setDeleteDialog(order._id)}
                                                 disabled={deletingId === order._id}
-                                                className="w-8 h-8 rounded-lg bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition disabled:opacity-60"
+                                                className="w-8 h-8 rounded-lg bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition disabled:opacity-60 shrink-0"
                                                 title="Delete order"
                                             >
                                                 {deletingId === order._id ? (
@@ -412,7 +407,7 @@ const UserOrdersPageClient = () => {
                 )}
             </div>
 
-            {/* Cancel Confirm Dialog */}
+            {/* Cancel Dialog */}
             {cancelDialog && (
                 <ConfirmDialog
                     title="Cancel Order"
@@ -424,7 +419,7 @@ const UserOrdersPageClient = () => {
                 />
             )}
 
-            {/* Delete Confirm Dialog */}
+            {/* Delete Dialog */}
             {deleteDialog && (
                 <ConfirmDialog
                     title="Delete Order"

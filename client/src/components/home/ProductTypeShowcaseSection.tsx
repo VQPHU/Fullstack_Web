@@ -57,14 +57,7 @@ const ProductTypeShowcaseSection = ({
         </div>
 
         <Link href={`/shop?productType=${productType._id}`}>
-          <Button
-            variant="outline"
-            className="hidden md:flex items-center gap-2 transition-colors"
-            style={{
-              borderColor: productType.color || "#0ea5e9",
-              color: productType.color || "#0ea5e9",
-            }}
-          >
+          <Button className="hidden md:flex items-center gap-2 w-full bg-babyshopSky hover:bg-babyshopSky/90">
             Shop All Items
             <ArrowRight className="w-4 h-4" />
           </Button>
@@ -92,7 +85,7 @@ const ProductTypeShowcaseSection = ({
 
       <div className="mt-8 text-center md:hidden">
         <Link href={`/shop?productType=${productType._id}`}>
-          <Button className="w-full" style={{ backgroundColor: productType.color || "#0ea5e9" }}>
+          <Button className="w-full bg-babyshopSky hover:bg-babyshopSky/90">
             Shop All Items
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>

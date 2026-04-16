@@ -7,6 +7,8 @@ import FeaturedServicesSection from "@/components/home/FeaturedServicesSection";
 import ProductTypeShowcaseSection from "@/components/home/ProductTypeShowcaseSection";
 import { Brand, ProductType } from "@/types/type";
 import { fetchData } from "@/lib/api";
+import ComfyApparelSection from "@/components/home/ComfyApparelSection";
+import BabyTravelSection from "@/components/home/BabyTravelSection";
 
 interface ProductTypesResponse {
   productTypes: ProductType[];
@@ -36,6 +38,8 @@ export default async function Home() {
             />
           ))}
           <FeaturedServicesSection />
+          {/* <ComfyApparelSection/>
+          <BabyTravelSection/> */}
         </div>
       </Container>
     </div>

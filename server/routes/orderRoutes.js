@@ -156,6 +156,9 @@ router.route("/:id")
     .get(protect, getOrderById)
     .delete(protect, deleteOrder);  
 
+router.route("/:id/status")
+    .put(protect, updateOrderStatus);
+
 router.route("/:id/webhook-status")
     .put(updateOrderStatus);
 

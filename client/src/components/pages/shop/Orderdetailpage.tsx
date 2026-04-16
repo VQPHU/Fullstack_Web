@@ -233,10 +233,12 @@ const OrderDetailPage = () => {
         metadata: { orderId: order._id },
       });
 
-      if ("url" in result && result.url) {
+      if ("error" in result) {
+        toast.error(result.error || "Failed to create checkout session");
+      } else if (result.url) {
         window.location.href = result.url;
       } else {
-        toast.error(result.error || "Failed to create checkout session");
+        toast.error("Failed to create checkout session");
       }
     } catch (error) {
       console.error("Pay now error:", error);

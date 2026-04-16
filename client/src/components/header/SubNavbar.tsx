@@ -13,7 +13,7 @@ const AccountHeader = () => {
         { label: "Profile", icon: <User size={18} />, href: "/user/profile" },
         { label: "Orders", icon: <Package size={18} />, href: "/user/orders" },
         { label: "Analytics", icon: <BarChart3 size={18} />, href: "/user/analytics" },
-        { label: "Notifications", icon: <Bell size={18} />, href: "/notifications" },
+        { label: "Notifications", icon: <Bell size={18} />, href: "/user/notifications" },
         { label: "Settings", icon: <Settings size={18} />, href: "/settings" },
     ];
 

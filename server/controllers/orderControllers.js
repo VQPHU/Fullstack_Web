@@ -2,6 +2,23 @@ import asyncHandler from "express-async-handler";
 import Order from "../models/orderModel.js";
 import Product from "../models/productModel.js";
 import cloudinary from "../config/cloudinary.js";
+import Notification from "../models/notificationModel.js";
+
+const createOrderNotification = async ({
+    userId,
+    orderId,
+    type,
+    title,
+    message,
+}) => {
+    await Notification.create({
+        userId,
+        orderId,
+        type,
+        title,
+        message,
+    });
+};
 
 
 // @desc Get all orders (Admin) or user's orders
@@ -152,6 +169,14 @@ export const createOrderFromCart = asyncHandler(async (req, res) => {
             $inc: { stock: -item.quantity }
         });
     }
+
+    await createOrderNotification({
+        userId: req.user._id,
+        orderId: order._id,
+        type: "order_placed",
+        title: "Order placed successfully",
+        message: `Your order #${order._id.toString().slice(-8).toUpperCase()} has been placed.`,
+    });
 
     res.status(201).json({
         success: true,
@@ -355,6 +380,8 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
         }
     }
 
+    const previousStatus = order.status;
+
     // Use findByIdAndUpdate to avoid full document validation 
     const updatedOrder = await Order.findByIdAndUpdate(
         req.params.id,
@@ -364,6 +391,17 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
             runValidators: false, // Disable validation to avoid shipping address issues 
         }
     );
+
+    if (updatedOrder && previousStatus !== status) {
+        await createOrderNotification({
+            userId: order.userId,
+            orderId: order._id,
+            type: "order_status_changed",
+            title: "Order status updated",
+            message: `Your order #${order._id.toString().slice(-8).toUpperCase()} changed from ${previousStatus} to ${status}.`,
+        });
+    }
+
     res.json({
         success: true,
         order: updatedOrder,

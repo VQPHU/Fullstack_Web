@@ -53,6 +53,7 @@ export const productSchema = z.object({
     discountPercentage: z.number().min(0).max(100),
     stock: z.number().min(0),
     category: z.string().min(1, { message: "Pleace select a category" }),
+    productType: z.string().min(1, { message: "Pleace select a product type" }),
     brand: z.string().min(1, { message: "Pleace select a brand" }),
     image: z.string().min(1, { message: "Pleace select an image" }), 
 });
@@ -64,4 +65,14 @@ export const bannerSchema = z.object({
   startFrom: z.number().min(0, "StartFrom must be a positive number"),
   image: z.string().min(1, "Image is required"),
   bannerType: z.string().min(1, "Type is required"),
+});
+
+export const productTypeSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    type: z.string().min(1, "Type key is required"),
+    description: z.string().optional(),
+    status: z.enum(["Active", "Inactive"], {
+        message: "Please select a valid status",
+    }),
+    color: z.string().optional(),
 });

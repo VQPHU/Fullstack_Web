@@ -59,6 +59,10 @@
                 required: true,
                 ref: "Category",
             },
+            productType: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "ProductType",
+            },
             brand: {
                 type: mongoose.Schema.Types.ObjectId,
                 required: true,

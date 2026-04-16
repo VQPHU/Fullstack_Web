@@ -60,6 +60,11 @@ const productItems = [
     label: "Products"
   },
   {
+    to: "/dashboard/product-types",
+    icon: <Layers size={20} />,
+    label: "Product Types"
+  },
+  {
     to: "/dashboard/categories",
     icon: <Tag size={20} />,
     label: "Categories",

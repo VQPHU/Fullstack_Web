@@ -1,7 +1,7 @@
 "use client"
 import { fetchData } from '@/lib/api';
-import { Brand, Category, Product } from '@/types/type';
-import { useSearchParams } from 'next/navigation';
+import { Brand, Category, Product, ProductType } from '@/types/type';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react'
 import Container from "@/components/common/container";
 import { Button } from '@/components/ui/button';
@@ -19,12 +19,18 @@ interface ProductsResponse {
 interface Props {
     categories: Category[];
     brands: Brand[];
+    productTypes: ProductType[];
 }
 
-const ShopPageClient = ({ categories, brands }: Props) => {
+const ShopPageClient = ({ categories, brands, productTypes }: Props) => {
+    const router = useRouter();
+    const pathname = usePathname();
     const searchParams = useSearchParams();
     const [category, setCategory] = useState<string>(
         searchParams.get("category") || ""
+    );
+    const [productType, setProductType] = useState<string>(
+        searchParams.get("productType") || ""
     );
     const [brand, setBrand] = useState<string>(searchParams.get("brand") || "");
     const [search, setSearch] = useState<string>(
@@ -36,10 +42,19 @@ const ShopPageClient = ({ categories, brands }: Props) => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [newlyLoadedProducts, setNewlyLoadedProducts] = useState<Product[]>([]);
     const [total, setTotal] = useState(0);
-    const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
-    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+    const [priceRange, setPriceRange] = useState<[number, number] | null>(() => {
+        const rawRange = searchParams.get("priceRange");
+        if (!rawRange) return null;
+
+        const [min, max] = rawRange.split("-");
+        return [Number(min), max === "Infinity" ? Infinity : Number(max)];
+    });
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
+        searchParams.get("sortOrder") === "desc" ? "desc" : "asc"
+    );
     const [currentPage, setCurrentPage] = useState(1);
     const [invalidCategory, setInvalidCategory] = useState<string>("");
+    const [invalidProductType, setInvalidProductType] = useState<string>("");
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
     const productsPerPage = 10;
 
@@ -66,6 +81,55 @@ const ShopPageClient = ({ categories, brands }: Props) => {
         }
     }, [searchParams, categories]);
 
+    useEffect(() => {
+        const productTypeFromUrl = searchParams.get("productType");
+
+        if (productTypeFromUrl) {
+            const productTypeExists = productTypes.some(
+                (item) => item._id === productTypeFromUrl
+            );
+
+            if (!productTypeExists) {
+                setInvalidProductType(productTypeFromUrl);
+                setProductType("");
+            } else {
+                setInvalidProductType("");
+                setProductType(productTypeFromUrl);
+            }
+        } else {
+            setInvalidProductType("");
+            setProductType("");
+        }
+    }, [searchParams, productTypes]);
+
+    useEffect(() => {
+        setBrand(searchParams.get("brand") || "");
+        setSearch(searchParams.get("search") || "");
+        setSortOrder(searchParams.get("sortOrder") === "desc" ? "desc" : "asc");
+
+        const rawRange = searchParams.get("priceRange");
+        if (!rawRange) {
+            setPriceRange(null);
+        } else {
+            const [min, max] = rawRange.split("-");
+            setPriceRange([Number(min), max === "Infinity" ? Infinity : Number(max)]);
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        const params = new URLSearchParams();
+
+        if (category) params.set("category", category);
+        if (productType) params.set("productType", productType);
+        if (brand) params.set("brand", brand);
+        if (search) params.set("search", search);
+        if (priceRange) params.set("priceRange", `${priceRange[0]}-${priceRange[1]}`);
+        if (sortOrder !== "asc") params.set("sortOrder", sortOrder);
+
+        const queryString = params.toString();
+        router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+    }, [pathname, router, category, productType, brand, search, priceRange, sortOrder]);
+
     const fetchProducts = useCallback(async (loadMore = false) => {
         if (loadMore) {
             setLoadingMore(true);
@@ -75,6 +139,7 @@ const ShopPageClient = ({ categories, brands }: Props) => {
         try {
             const params = new URLSearchParams();
             if (category) params.append("category", category);
+            if (productType) params.append("productType", productType);
             if (brand) params.append("brand", brand);
             if (search) params.append("search", search);
             if (priceRange) {
@@ -107,12 +172,12 @@ const ShopPageClient = ({ categories, brands }: Props) => {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [category, brand, search, priceRange, sortOrder, productsPerPage, currentPage,]);
+    }, [category, productType, brand, search, priceRange, sortOrder, productsPerPage, currentPage,]);
 
     useEffect(() => {
         fetchProducts();
         setCurrentPage(1);
-    }, [category, brand, search, priceRange, sortOrder,]);
+    }, [category, productType, brand, search, priceRange, sortOrder,]);
 
     useEffect(() => {
         if (currentPage > 1) {
@@ -157,6 +222,12 @@ const ShopPageClient = ({ categories, brands }: Props) => {
         setCurrentPage(1);
     };
 
+    const resetProductType = () => {
+        setProductType("");
+        setCurrentPage(1);
+        setInvalidProductType("");
+    };
+
     const resetSearch = () => {
         setSearch("");
         setCurrentPage(1);
@@ -174,12 +245,14 @@ const ShopPageClient = ({ categories, brands }: Props) => {
 
     const resetAllFilters = () => {
         setCategory("");
+        setProductType("");
         setBrand("");
         setSearch("");
         setPriceRange(null);
         setSortOrder("asc");
         setCurrentPage(1);
         setInvalidCategory("");
+        setInvalidProductType("");
     };
 
     return (
@@ -199,8 +272,15 @@ const ShopPageClient = ({ categories, brands }: Props) => {
                             </p>
                         </div>
                     )}
+                    {invalidProductType && (
+                        <div className='mt-2  bg-yellow-50 border border-yellow-200 rounded-md py-1 px-2'>
+                            <p className='text-sm text-yellow-800'>
+                                Product type &quot;{invalidProductType}&quot; not found or inactive. Showing available products instead
+                            </p>
+                        </div>
+                    )}
                 </div>
-                {(category || brand || search || priceRange || sortOrder !== "asc") && <Button
+                {(category || productType || brand || search || priceRange || sortOrder !== "asc") && <Button
                     variant={"outline"}
                     className='text-sm'
                     onClick={resetAllFilters}
@@ -237,7 +317,7 @@ const ShopPageClient = ({ categories, brands }: Props) => {
                                     <span className='inline-flex items-center px-3 py-1
                                       rounded-full text-sm bg-blue-50 text-blue-700 border 
                                       border-blue-200'>
-                                        `&quot;`{search} `&quot;`
+                                        &quot;{search}&quot;
                                         <button
                                             onClick={resetSearch}
                                             className='ml-2 text-blue-500 hover:text-blue-700'
@@ -283,6 +363,44 @@ const ShopPageClient = ({ categories, brands }: Props) => {
                                         <SelectItem value='All'>All Categories</SelectItem>
                                         {categories?.map((cat: Category) => (
                                             <SelectItem key={cat?._id} value={cat?._id}>{cat?.name}</SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className='mb-4'>
+                            <div className='flex justify-between items-center'>
+                                <label className='block text-sm font-medium mb-2'>Product Type</label>
+                                {productType && (
+                                    <Button
+                                        variant="link"
+                                        size="sm"
+                                        onClick={resetProductType}
+                                        disabled={loading}
+                                        className='text-xs text-blue-600 p-0'
+                                    >
+                                        Reset
+                                    </Button>
+                                )}
+                            </div>
+                            <Select
+                                value={productType || "All"}
+                                onValueChange={(value) => {
+                                    setProductType(value === "All" ? "" : value);
+                                    setCurrentPage(1);
+                                    setInvalidProductType("");
+                                }}
+                                disabled={loading}
+                            >
+                                <SelectTrigger className='w-full p-2 border rounded-md'>
+                                    <SelectValue placeholder="Select a product type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectLabel>Product Types</SelectLabel>
+                                        <SelectItem value='All'>All Product Types</SelectItem>
+                                        {productTypes?.map((item: ProductType) => (
+                                            <SelectItem key={item?._id} value={item?._id}>{item?.name}</SelectItem>
                                         ))}
                                     </SelectGroup>
                                 </SelectContent>
@@ -404,8 +522,8 @@ const ShopPageClient = ({ categories, brands }: Props) => {
                                     <SelectValue placeholder="Sort By" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value='asc'>Newest First</SelectItem>
-                                    <SelectItem value='desc'>Oldest First</SelectItem>
+                                    <SelectItem value='desc'>Newest First</SelectItem>
+                                    <SelectItem value='asc'>Oldest First</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -418,7 +536,7 @@ const ShopPageClient = ({ categories, brands }: Props) => {
 
                         products?.length > 0 ?
 
-                            < div className='w-full'>
+                            <div className='w-full'>
                                 <div className='grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3'>
                                     {products?.map((product, index) => {
                                         const isNewlyLoaded = newlyLoadedProducts.some(

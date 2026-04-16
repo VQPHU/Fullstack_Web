@@ -11,6 +11,15 @@ export interface Brand {
   image?: string;
 }
 
+export interface ProductType {
+  _id: string;
+  name: string;
+  type: string;
+  description?: string;
+  status: "Active" | "Inactive";
+  color?: string;
+}
+
 export interface Product {
   _id: string;
   name: string;
@@ -22,6 +31,7 @@ export interface Product {
   image: string;
   category: Category;
   brand: Brand;
+  productType?: ProductType;
   ratings: [];
   quantity?: number;
 }

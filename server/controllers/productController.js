@@ -1,6 +1,22 @@
 import asyncHandler from "express-async-handler";
+import mongoose from "mongoose";
 import Product from "../models/productModel.js";
+import Category from "../models/categoryModel.js";
+import Brand from "../models/brandModel.js";
+import ProductType from "../models/productTypeModel.js";
 import cloudinary from "../config/cloudinary.js";
+
+const resolveReferencedId = async (Model, value) => {
+  if (!value) return null;
+
+  // Nếu là ID chuẩn thì trả về luôn
+  if (mongoose.Types.ObjectId.isValid(value)) return value;
+
+  // Tìm trực tiếp theo slug (không cần regex phức tạp)
+  const document = await Model.findOne({ slug: value }).select("_id");
+  
+  return document?._id;
+};
 
 // @desc    Get all products
 // @route   GET /api/products
@@ -8,17 +24,20 @@ import cloudinary from "../config/cloudinary.js";
 const getProducts = asyncHandler(async (req, res) => {
   const {
     page = 1,
-    limit = 10,
+    limit,
+    perPage,
     sortOrder = "asc",
     category,
+    productType,
     brand,
     priceMin,
     priceMax,
     search,
+    includeInactiveTypes = "false",
   } = req.query;
 
   const pageNumber = parseInt(page);
-  const limitNumber = parseInt(limit);
+  const limitNumber = parseInt(limit || perPage || 10);
 
   if (pageNumber < 1 || limitNumber < 1) {
     res.status(400);
@@ -31,9 +50,52 @@ const getProducts = asyncHandler(async (req, res) => {
   }
 
   const query = {};
+  const includeInactiveProductTypes = includeInactiveTypes === "true";
 
-  if (category) query.category = category;
-  if (brand) query.brand = brand;
+  if (category) {
+    const categoryId = await resolveReferencedId(Category, category);
+    if (!categoryId) {
+      return res.json({ products: [], total: 0 });
+    }
+    query.category = categoryId;
+  }
+
+  if (brand) {
+    const brandId = await resolveReferencedId(Brand, brand);
+    if (!brandId) {
+      return res.json({ products: [], total: 0 });
+    }
+    query.brand = brandId;
+  }
+
+  if (productType) {
+    const productTypeId = await resolveReferencedId(ProductType, productType);
+    if (!productTypeId) {
+      return res.json({ products: [], total: 0 });
+    }
+    query.productType = productTypeId;
+  }
+
+  if (!includeInactiveProductTypes) {
+    const activeProductTypes = await ProductType.find({ status: "Active" }).select("_id");
+    const activeProductTypeIds = activeProductTypes.map((item) => item._id);
+
+    if (query.productType) {
+      const isActiveProductType = activeProductTypeIds.some(
+        (id) => id.toString() === query.productType.toString()
+      );
+
+      if (!isActiveProductType) {
+        return res.json({ products: [], total: 0, page: pageNumber, totalPages: 0 });
+      }
+    } else {
+      query.$or = [
+        { productType: { $in: activeProductTypeIds } },
+        { productType: { $exists: false } },
+        { productType: null },
+      ];
+    }
+  }
 
   if (priceMin || priceMax) {
     query.price = {};
@@ -56,6 +118,7 @@ const getProducts = asyncHandler(async (req, res) => {
   const [products, total] = await Promise.all([
     Product.find(query)
       .populate("category", "name")
+      .populate("productType", "name type color status")
       .populate("brand", "name")
       .skip(skip)
       .limit(limitNumber)
@@ -63,7 +126,9 @@ const getProducts = asyncHandler(async (req, res) => {
     Product.countDocuments(query),
   ]);
 
-  res.json({ products, total });
+  const totalPages = Math.ceil(total / limitNumber);
+
+  res.json({ products, total, page: pageNumber, totalPages });
 });
 
 // @desc    Get product by ID
@@ -72,9 +137,14 @@ const getProducts = asyncHandler(async (req, res) => {
 const getProductById = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id)
     .populate("category", "name")
+    .populate("productType", "name type color status")
     .populate("brand", "name");
 
   if (product) {
+    if (product.productType?.status === "Inactive") {
+      res.status(404);
+      throw new Error("Product not found");
+    }
     res.json(product);
   } else {
     res.status(404);
@@ -91,6 +161,7 @@ const createProduct = asyncHandler(async (req, res) => {
     description,
     price,
     category,
+    productType,
     brand,
     image,
     discountPercentage,
@@ -112,6 +183,7 @@ const createProduct = asyncHandler(async (req, res) => {
     description,
     price,
     category,
+    productType,
     brand,
     discountPercentage: discountPercentage || 0,
     stock: stock || 0,
@@ -135,6 +207,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     description,
     price,
     category,
+    productType,
     brand,
     image,
     discountPercentage,
@@ -156,6 +229,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     product.description = description || product.description;
     product.price = price || product.price;
     product.category = category || product.category;
+    product.productType = productType || product.productType;
     product.brand = brand || product.brand;
     product.discountPercentage =
       discountPercentage || product.discountPercentage;

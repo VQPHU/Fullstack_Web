@@ -33,6 +33,7 @@ export type Product = {
     image: string;
     category: Category;
     brand: Brand;
+    productType?: ProductType;
     createdAt: string;
 }
 
@@ -43,6 +44,16 @@ export type Banner = {
     startFrom: number;
     image: string;
     bannerType: string;
+    createdAt: string;
+};
+
+export type ProductType = {
+    _id: string;
+    name: string;
+    type: string;
+    description?: string;
+    status: "Active" | "Inactive";
+    color?: string;
     createdAt: string;
 };
 

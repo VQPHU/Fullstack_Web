@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useAxiosPrivate } from '@/hooks/useAxiosPrivate';
-import { Brand, Category, Product } from '@/lib/type';
+import { Brand, Category, Product, ProductType } from '@/lib/type';
 import { productSchema } from '@/lib/validation';
 import useAuthStore from '@/store/useAuthStore';
 import { AxiosError } from 'axios';
@@ -25,6 +25,7 @@ type FormData = z.infer<typeof productSchema>;
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1); // Default page = 1; 
@@ -52,6 +53,7 @@ const Products = () => {
       discountPercentage: 10,
       stock: 10,
       category: "",
+      productType: "",
       brand: "",
       image: "",
     }
@@ -67,6 +69,7 @@ const Products = () => {
       discountPercentage: 10,
       stock: 10,
       category: "",
+      productType: "",
       brand: "",
       image: "",
     }
@@ -77,7 +80,7 @@ const Products = () => {
     try {
       const currentPage = resetPage ? 1 : page;
       const response = await axiosPrivate.get("/products", {
-        params: { page: currentPage, perPage, sortOrder },
+        params: { page: currentPage, perPage, sortOrder, includeInactiveTypes: true },
       });
 
       setProducts(response.data.products || []);
@@ -135,6 +138,24 @@ const Products = () => {
     }
   };
 
+  const fetchProductTypes = async () => {
+    try {
+      const response = await axiosPrivate.get("/product-types", {
+        params: {
+          page: 1,
+          perPage: 100,
+          status: "Active",
+        },
+      });
+
+      setProductTypes(response.data.productTypes || []);
+
+    } catch (error) {
+      console.log("Failed to load product types", error);
+      toast("Failed to load product types");
+    }
+  };
+
 
   useEffect(() => {
     fetchProducts();
@@ -142,6 +163,7 @@ const Products = () => {
 
   useEffect(() => {
     fetchCategories();
+    fetchProductTypes();
     fetchBrands();
   }, []);
 
@@ -208,6 +230,7 @@ const Products = () => {
       discountPercentage: product.discountPercentage,
       stock: product.stock,
       category: product.category._id,
+      productType: product.productType?._id || "",
       brand: product.brand._id,
       image: product.image,
     });
@@ -274,7 +297,7 @@ const Products = () => {
 
     try {
       const response = await axiosPrivate.get("/products", {
-        params: { page, perPage, sortOrder },
+        params: { page, perPage, sortOrder, includeInactiveTypes: true },
       });
 
       setProducts(response?.data?.products || []);
@@ -376,6 +399,7 @@ const Products = () => {
                     <TableHead className='font-semibold'>Stock</TableHead>
                     <TableHead className='font-semibold'>Rating</TableHead>
                     <TableHead className='font-semibold'>Category</TableHead>
+                    <TableHead className='font-semibold'>Product Type</TableHead>
                     <TableHead className='font-semibold'>Brand</TableHead>
                     {isAdmin && (
                       <TableHead className='text-right font-semibold min-w-[100px]'>
@@ -453,6 +477,18 @@ const Products = () => {
                       </TableCell>
 
                       <TableCell>
+                        <span
+                          className='inline-flex items-center rounded-full px-2 py-1 text-xs font-medium whitespace-nowrap max-w-[120px] truncate'
+                          style={{
+                            backgroundColor: product?.productType?.color || "#e5e7eb",
+                            color: "#111827",
+                          }}
+                        >
+                          {product?.productType?.name || "N/A"}
+                        </span>
+                      </TableCell>
+
+                      <TableCell>
                         <span className='inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs
                         font-medium text-blue-800 whitespace-nowrap max-w-[100px] truncate'>
                           {product?.brand?.name}
@@ -487,7 +523,7 @@ const Products = () => {
                   {products.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={isAdmin ? 9 : 8}
+                        colSpan={isAdmin ? 10 : 9}
                         className="text-center py-12 text-muted-foreground"
                       >
                         <div className="flex flex-col items-center gap-2">
@@ -710,34 +746,65 @@ const Products = () => {
                 />
               </div>
 
-              <FormField
-                control={formAdd.control}
-                name="brand"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Brand</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={formLoading}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a brand" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {brands.map((brand) => (
-                          <SelectItem key={brand._id} value={brand._id}>
-                            {brand.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={formAdd.control}
+                  name="productType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Product Type</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={formLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a product type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {productTypes.map((productType) => (
+                            <SelectItem key={productType._id} value={productType._id}>
+                              {productType.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={formAdd.control}
+                  name="brand"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Brand</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={formLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a brand" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {brands.map((brand) => (
+                            <SelectItem key={brand._id} value={brand._id}>
+                              {brand.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={formAdd.control}
@@ -928,34 +995,65 @@ const Products = () => {
                 />
               </div>
 
-              <FormField
-                control={formEdit.control}
-                name="brand"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Brand</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={formLoading}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a brand" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {brands.map((brand) => (
-                          <SelectItem key={brand._id} value={brand._id}>
-                            {brand.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={formEdit.control}
+                  name="productType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Product Type</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={formLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a product type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {productTypes.map((productType) => (
+                            <SelectItem key={productType._id} value={productType._id}>
+                              {productType.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={formEdit.control}
+                  name="brand"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Brand</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={formLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a brand" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {brands.map((brand) => (
+                            <SelectItem key={brand._id} value={brand._id}>
+                              {brand.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={formEdit.control}

@@ -116,7 +116,7 @@ const UserButton = () => {
                 Wishlist
               </MenuItem>
 
-              <MenuItem href="/user/analytics" icon={<Bell size={18} />}>
+              <MenuItem href="/user/notifications" icon={<Bell size={18} />}>
                 Notifications
               </MenuItem>
 

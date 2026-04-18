@@ -15,6 +15,7 @@ import Categories from './pages/Categories'
 import Brands from './pages/Brands'
 import UsersPage from './pages/Users'
 import Product_Types from './pages/Producttypes'
+import Addresses from './pages/Addresses'
 
 
 const router = createBrowserRouter([
@@ -64,6 +65,10 @@ const router = createBrowserRouter([
       {
         path: "/dashboard/product-types",
         element: <Product_Types />
+      },
+      {
+        path: "/dashboard/addresses",
+        element: <Addresses />
       }
     ],
   },

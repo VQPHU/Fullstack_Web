@@ -2,7 +2,6 @@ import asyncHandler from "express-async-handler";
 import Product from "../models/productModel.js";
 import Order from "../models/orderModel.js";
 import User from "../models/userModels.js";
-import mongoose from "mongoose";
 
 // @desc    Get analytics overview
 // @route   GET /api/analytics/overview
@@ -36,8 +35,16 @@ const getAnalyticsOverview = asyncHandler(async (req, res) => {
       .limit(10);
 
     // Get best selling products (based on order frequency)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
     const bestSellingProducts = await Order.aggregate([
-      { $match: { status: { $in: ["paid", "completed"] } } },
+      {
+        $match: {
+          status: { $in: ["paid", "completed"] },
+          createdAt: { $gte: thirtyDaysAgo }
+        }
+      },
       { $unwind: "$items" },
       {
         $group: {
@@ -46,11 +53,24 @@ const getAnalyticsOverview = asyncHandler(async (req, res) => {
           totalRevenue: {
             $sum: { $multiply: ["$items.price", "$items.quantity"] },
           },
-          productName: { $first: "$items.name" },
-          productImage: { $first: "$items.image" },
         },
       },
-      { $sort: { totalSold: -1 } },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "_id",
+          as: "productDetails",
+        },
+      },
+      {
+        $addFields: {
+          productName: { $arrayElemAt: ["$productDetails.name", 0] },
+          productImage: { $arrayElemAt: ["$productDetails.image", 0] },
+        },
+      },
+      { $project: { productDetails: 0 } },
+      { $sort: { totalSold: -1, totalRevenue: -1 } },
       { $limit: 10 },
     ]);
 
@@ -136,7 +156,8 @@ const getProductAnalytics = asyncHandler(async (req, res) => {
       sortBy = "totalSold",
       sortOrder = "desc",
     } = req.query;
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.max(1, parseInt(limit) || 20);
+    const skip = (page - 1) * safeLimit;
 
     // Get detailed product analytics
     const productAnalytics = await Order.aggregate([
@@ -260,7 +281,7 @@ const getSalesAnalytics = asyncHandler(async (req, res) => {
     const salesData = await Order.aggregate([
       { $match: matchStage },
       { $group: groupStage },
-      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1, "_id.week": 1 } },
+      { $sort: period === "daily" ? { "_id.year": 1, "_id.month": 1, "_id.day": 1 } : period === "weekly" ? { "_id.year": 1, "_id.week": 1 } : { "_id.year": 1, "_id.month": 1 } },
     ]);
 
     // Get top customers

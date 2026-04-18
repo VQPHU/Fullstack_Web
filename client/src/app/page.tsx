@@ -14,14 +14,12 @@ interface ProductTypesResponse {
   productTypes: ProductType[];
 }
 
-
 export default async function Home() {
   const brands = await fetchData<Brand[]>("/brands");
   const productTypesData = await fetchData<ProductTypesResponse>(
     "/product-types?status=Active&perPage=6&sortOrder=desc"
   );
   const featuredProductTypes = productTypesData.productTypes || [];
-  console.log("productTypesData:", productTypesData);
 
   return (
     <div>

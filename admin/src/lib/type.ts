@@ -198,3 +198,17 @@ export interface OverviewData {
         orderStatusBreakdown: OrderStatusBreakdown[];
     };
 }
+
+export interface Address {
+    _id: string;
+    street: string;
+    city: string;
+    state?: string;
+    country: string;
+    postalCode: string;
+    isDefault: boolean;
+}
+
+export interface UserWithAddresses extends User {
+    addresses: Address[];
+}

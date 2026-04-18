@@ -2,9 +2,10 @@ import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "./ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Bookmark, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard, LogOut, Package, ShoppingBag, Tag, User, Users } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard, LogOut, Package, ShoppingBag, Tag, User, Users, MapPin } from "lucide-react";
 import useAuthStore from "@/store/useAuthStore";
 import { NavLink, useLocation } from "react-router";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 type NavItemProps = {
   to: string;
@@ -32,15 +33,22 @@ const navigationItems = [
     label: "Account",
   },
   {
-    to: "/dashboard/users",
-    icon: <Users size={20} />,
-    label: "Users "
-  },
-
-  {
     to: "/dashboard/banners",
     icon: <Layers size={20} />,
     label: "Banners",
+  },
+];
+
+const CustomersItems = [
+  {
+    to: "/dashboard/users",
+    icon: <Users size={20} />,
+    label: "Users"
+  },
+  {
+    to: "/dashboard/addresses",
+    icon: <MapPin size={20} />,
+    label: "Addresses",
   },
 ];
 
@@ -90,9 +98,11 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
       animate={{ width: open ? 256 : 80 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
       className={cn(
-        "fixed inset-y-0  left-0 z-20 flex flex-col border-r border-r-slate-800/50 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl transition-all duration-300",
-        open ? "w-64" : "w-20")}>
-      < div className="flex items-center justify-between p-4 h-16 bg-gradient-to-r from-[#29beb3] via-slate-700 to-[#a96bde] border-b border-slate-600 / 50">
+        "fixed inset-y-0 left-0 z-20 h-screen flex flex-col overflow-hidden border-r border-r-slate-800/50 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl",
+        open ? "w-64" : "w-20"
+      )}
+    >
+      < div className="sticky top-0 z-10 flex items-center justify-between p-4 h-16 bg-gradient-to-r from-[#29beb3] via-slate-700 to-[#a96bde] border-b border-slate-600/50">
         <motion.div
           className={cn(
             "flex items-center overflow-hidden", open ? "w-auto opacity-100" : "w-0 opacity-0"
@@ -128,82 +138,115 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
         </motion.div>
       </div >
       {/* Sidebar menu */}
-      <div className="flex flex-col flex-1 gap-1 p-3 bg-gradient-to-b from-slate-900/50 to-slate-800/50 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900/20">
-        {navigationItems?.map((item) => (
-          <NavItem
-            key={item?.to}
-            to={item.to}
-            icon={item.icon}
-            label={item.label}
-            open={open}
-            end={item.end}
-            pathname={pathname}
-          />
-        ))}
-        {/* Sales & Orders */}
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="sales-orders" className="border-none">
-            <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
-              <div className="flex items-center gap-3">
-                <Package size={20} />
-                {open && "Sales & Orders"}
-              </div>
-            </AccordionTrigger>
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-3 space-y-1">
+          {navigationItems?.map((item) => (
+            <NavItem
+              key={item?.to}
+              to={item.to}
+              icon={item.icon}
+              label={item.label}
+              open={open}
+              end={item.end}
+              pathname={pathname}
+            />
+          ))}
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="customers" className="border-none">
+              <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
+                <div className="flex items-center gap-3">
+                  <Users size={20} />
+                  {open && "Customers"}
+                </div>
+              </AccordionTrigger>
 
-            <AccordionContent className="pb-0 px-2 py-1">
-              <div className="space-y-1 pb-3">
-                {salesItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    className={cn(
-                      "flex items-center p-3 pl-8 rounded-lg text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm",
-                      pathname === item.to
-                        ? "bg-gradient-to-r from-[#29beb3]/20 to-[#a96bde]/20 text-white shadow-lg shadow-[#29beb3]/20 ring-1 ring-[#29beb3]/30 border border-white/10 backdrop-blur-sm"
-                        : "text-slate-300 hover:scale-102"
-                    )}
-                  >
-                    <span>{item.icon}</span>
-                    {open && item.label}
-                  </NavLink>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="product-catalog" className="border-none">
-            <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
-              <div className="flex items-center gap-3">
-                <ShoppingBag size={20} />
-                {open && "Product Catalog"}
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="pb-0 px-2 py-1">
-              <div className="space-y-1 pb-3">
-                {productItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    className={cn(
-                      "flex items-center p-3 pl-8 rounded-lg text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm",
-                      pathname === item.to
-                        ? "bg-gradient-to-r from-[#29beb3]/20 to-[#a96bde]/20 text-white shadow-lg shadow-[#29beb3]/20 ring-1 ring-[#29beb3]/30 border border-white/10 backdrop-blur-sm"
-                        : "text-slate-300 hover:scale-102"
-                    )}
-                  >
-                    <span>{item.icon}</span>
-                    {open && item.label}
-                  </NavLink>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </div>
+              <AccordionContent className="pb-0 px-2 py-1">
+                <div className="space-y-1 pb-3">
+                  {CustomersItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "flex items-center p-3 pl-8 rounded-lg text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm",
+                        pathname === item.to
+                          ? "bg-gradient-to-r from-[#29beb3]/20 to-[#a96bde]/20 text-white shadow-lg shadow-[#29beb3]/20 ring-1 ring-[#29beb3]/30 border border-white/10 backdrop-blur-sm"
+                          : "text-slate-300 hover:scale-102"
+                      )}
+                    >
+                      <span>{item.icon}</span>
+                      {open && item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          {/* Sales & Orders */}
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="sales-orders" className="border-none">
+              <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
+                <div className="flex items-center gap-3">
+                  <Package size={20} />
+                  {open && "Sales & Orders"}
+                </div>
+              </AccordionTrigger>
+
+              <AccordionContent className="pb-0 px-2 py-1">
+                <div className="space-y-1 pb-3">
+                  {salesItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "flex items-center p-3 pl-8 rounded-lg text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm",
+                        pathname === item.to
+                          ? "bg-gradient-to-r from-[#29beb3]/20 to-[#a96bde]/20 text-white shadow-lg shadow-[#29beb3]/20 ring-1 ring-[#29beb3]/30 border border-white/10 backdrop-blur-sm"
+                          : "text-slate-300 hover:scale-102"
+                      )}
+                    >
+                      <span>{item.icon}</span>
+                      {open && item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="product-catalog" className="border-none">
+              <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
+                <div className="flex items-center gap-3">
+                  <ShoppingBag size={20} />
+                  {open && "Product Catalog"}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-0 px-2 py-1">
+                <div className="space-y-1 pb-3">
+                  {productItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "flex items-center p-3 pl-8 rounded-lg text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm",
+                        pathname === item.to
+                          ? "bg-gradient-to-r from-[#29beb3]/20 to-[#a96bde]/20 text-white shadow-lg shadow-[#29beb3]/20 ring-1 ring-[#29beb3]/30 border border-white/10 backdrop-blur-sm"
+                          : "text-slate-300 hover:scale-102"
+                      )}
+                    >
+                      <span>{item.icon}</span>
+                      {open && item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+         <ScrollBar orientation="vertical" className="w-1.5" />
+      </ScrollArea>
 
       {/* Logout button */}
-      <div className="p-4 border-t border-slate-600/50 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800">
+      <div className="sticky bottom-0 p-4 border-t border-slate-600/50 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800">
         <motion.div
           className={cn(
             "flex items-center gap-3 mb-4",

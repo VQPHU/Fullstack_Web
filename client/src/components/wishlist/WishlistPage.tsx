@@ -61,7 +61,7 @@ export default function WishlistPage() {
             🏠
           </Link>
           <span>/</span>
-          <Link href="/user" className="hover:text-teal-500 transition-colors">
+          <Link href="/user/profile" className="hover:text-teal-500 transition-colors">
             User
           </Link>
           <span>/</span>

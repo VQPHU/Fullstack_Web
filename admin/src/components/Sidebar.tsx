@@ -6,6 +6,7 @@ import { Bookmark, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard,
 import useAuthStore from "@/store/useAuthStore";
 import { NavLink, useLocation } from "react-router";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { LayoutGrid } from "lucide-react";
 
 type NavItemProps = {
   to: string;
@@ -31,11 +32,6 @@ const navigationItems = [
     to: "/dashboard/account",
     icon: <User size={20} />,
     label: "Account",
-  },
-  {
-    to: "/dashboard/banners",
-    icon: <Layers size={20} />,
-    label: "Banners",
   },
 ];
 
@@ -86,6 +82,19 @@ const productItems = [
     icon: <Bookmark size={20} />,
     label: "Brands",
   },
+];
+
+const MarkettingItems = [
+  {
+    to: "/dashboard/banners",
+    icon: <Layers size={20} />,
+    label: "Banners",
+  },
+  {
+    to: "/dashboard/ads-banners",
+    icon: <LayoutGrid size={20} />,
+    label: "Ads Banners",
+  }
 ];
 
 
@@ -241,8 +250,38 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="marketing" className="border-none">
+              <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
+                <div className="flex items-center gap-3">
+                  <Layers size={20} />
+                  {open && "Marketing"}
+                </div>
+              </AccordionTrigger>
+
+              <AccordionContent className="pb-0 px-2 py-1">
+                <div className="space-y-1 pb-3">
+                  {MarkettingItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "flex items-center p-3 pl-8 rounded-lg text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm",
+                        pathname === item.to
+                          ? "bg-gradient-to-r from-[#29beb3]/20 to-[#a96bde]/20 text-white shadow-lg shadow-[#29beb3]/20 ring-1 ring-[#29beb3]/30 border border-white/10 backdrop-blur-sm"
+                          : "text-slate-300 hover:scale-102"
+                      )}
+                    >
+                      <span>{item.icon}</span>
+                      {open && item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
-         <ScrollBar orientation="vertical" className="w-1.5" />
+        <ScrollBar orientation="vertical" className="w-1.5" />
       </ScrollArea>
 
       {/* Logout button */}

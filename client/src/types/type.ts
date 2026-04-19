@@ -63,3 +63,14 @@ export type Banners = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type AdsBanner = {
+    _id: string;
+    name: string;
+    title: string | { _id: string; name: string; type: string; color?: string };
+    image?: string;
+    type: "advertisement" | "promotion" | "banner";
+    order: number;
+    status: "Active" | "Inactive";
+    createdAt: string;
+};

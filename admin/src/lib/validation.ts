@@ -55,16 +55,16 @@ export const productSchema = z.object({
     category: z.string().min(1, { message: "Pleace select a category" }),
     productType: z.string().min(1, { message: "Pleace select a product type" }),
     brand: z.string().min(1, { message: "Pleace select a brand" }),
-    image: z.string().min(1, { message: "Pleace select an image" }), 
+    image: z.string().min(1, { message: "Pleace select an image" }),
 });
 
 // Define the Zod schema for banner validation
 export const bannerSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  title: z.string().min(1, "Title is required"),
-  startFrom: z.number().min(0, "StartFrom must be a positive number"),
-  image: z.string().min(1, "Image is required"),
-  bannerType: z.string().min(1, "Type is required"),
+    name: z.string().min(1, "Name is required"),
+    title: z.string().min(1, "Title is required"),
+    startFrom: z.number().min(0, "StartFrom must be a positive number"),
+    image: z.string().min(1, "Image is required"),
+    bannerType: z.string().min(1, "Type is required"),
 });
 
 export const productTypeSchema = z.object({
@@ -75,4 +75,17 @@ export const productTypeSchema = z.object({
         message: "Please select a valid status",
     }),
     color: z.string().optional(),
+});
+
+export const adsBannerSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    title: z.string().min(1, "Title is required"),
+    image: z.string().min(1, "Image is required"), 
+    type: z.enum(["advertisement", "promotion", "banner"], {
+        message: "Please select a valid type",
+    }),
+    order: z.number().min(0, "Order must be a positive number"),
+    status: z.enum(["Active", "Inactive"], {
+        message: "Please select a valid status",
+    }),
 });

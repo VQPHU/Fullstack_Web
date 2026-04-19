@@ -283,7 +283,7 @@ export default function BannersPage() {
 
       {/* Add Banner Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] sm:max-h-[600px] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Banner</DialogTitle>
             <DialogDescription>Create a new banner</DialogDescription>

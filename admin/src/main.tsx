@@ -16,6 +16,7 @@ import Brands from './pages/Brands'
 import UsersPage from './pages/Users'
 import Product_Types from './pages/Producttypes'
 import Addresses from './pages/Addresses'
+import AdsBanners from './pages/AdsBanners'
 
 
 const router = createBrowserRouter([
@@ -69,6 +70,10 @@ const router = createBrowserRouter([
       {
         path: "/dashboard/addresses",
         element: <Addresses />
+      },
+      {
+        path: "/dashboard/ads-banners",
+        element: <AdsBanners />
       }
     ],
   },

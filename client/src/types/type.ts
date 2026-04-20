@@ -20,6 +20,15 @@ export interface ProductType {
   color?: string;
 }
 
+export interface Rating {
+  _id: string;
+  userId: { _id: string; name: string; email: string };
+  rating: number;
+  comment: string;
+  status: "pending" | "approved";
+  createdAt: string;
+}
+
 export interface Product {
   _id: string;
   name: string;
@@ -32,7 +41,7 @@ export interface Product {
   category: Category;
   brand: Brand;
   productType?: ProductType;
-  ratings: [];
+  ratings: Rating[];
   quantity?: number;
 }
 

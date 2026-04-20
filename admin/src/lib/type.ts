@@ -223,3 +223,19 @@ export type AdsBanner = {
     status: "Active" | "Inactive";
     createdAt: string;
 };
+
+// ---- Types ----
+export interface Review {
+    _id: string;
+    productId: string;
+    productName: string;
+    userId: {
+        _id: string;
+        name: string;
+        email: string;
+    };
+    rating: number;
+    comment: string;
+    status: "pending" | "approved";
+    createdAt: string;
+}

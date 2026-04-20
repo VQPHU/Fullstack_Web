@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "./ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Bookmark, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard, LogOut, Package, ShoppingBag, Tag, User, Users, MapPin } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard, LogOut, Package, ShoppingBag, Tag, User, Users, MapPin, Star } from "lucide-react";
 import useAuthStore from "@/store/useAuthStore";
 import { NavLink, useLocation } from "react-router";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -94,6 +94,11 @@ const MarkettingItems = [
     to: "/dashboard/ads-banners",
     icon: <LayoutGrid size={20} />,
     label: "Ads Banners",
+  },
+  {
+    to: "/dashboard/reviews",
+    icon: <Star size={20} />,
+    label: "Reviews",
   }
 ];
 

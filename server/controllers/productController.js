@@ -14,7 +14,7 @@ const resolveReferencedId = async (Model, value) => {
 
   // Tìm trực tiếp theo slug (không cần regex phức tạp)
   const document = await Model.findOne({ slug: value }).select("_id");
-  
+
   return document?._id;
 };
 
@@ -138,7 +138,8 @@ const getProductById = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id)
     .populate("category", "name")
     .populate("productType", "name type color status")
-    .populate("brand", "name");
+    .populate("brand", "name")
+    .populate("ratings.userId", "name email");
 
   if (product) {
     if (product.productType?.status === "Inactive") {
@@ -227,13 +228,12 @@ const updateProduct = asyncHandler(async (req, res) => {
 
     product.name = name || product.name;
     product.description = description || product.description;
-    product.price = price || product.price;
+    product.price = price !== undefined ? price : product.price;
     product.category = category || product.category;
     product.productType = productType || product.productType;
     product.brand = brand || product.brand;
-    product.discountPercentage =
-      discountPercentage || product.discountPercentage;
-    product.stock = stock || product.stock;
+    product.discountPercentage = discountPercentage !== undefined ? discountPercentage : product.discountPercentage;
+    product.stock = stock !== undefined ? stock : product.stock;
 
     if (image && image !== product.image) {
       const result = await cloudinary.uploader.upload(image, {
@@ -254,7 +254,12 @@ const updateProduct = asyncHandler(async (req, res) => {
 // @route   POST /api/products/:id/rate
 // @access  Private
 const rateProduct = asyncHandler(async (req, res) => {
-  const { rating } = req.body;
+  const { rating, comment } = req.body;
+
+  if (!rating || rating < 1 || rating > 5) {
+    res.status(400);
+    throw new Error("Rating must be between 1 and 5");
+  }
   const product = await Product.findById(req.params.id);
 
   if (product) {
@@ -264,10 +269,14 @@ const rateProduct = asyncHandler(async (req, res) => {
 
     if (alreadyRated) {
       alreadyRated.rating = rating;
+      alreadyRated.comment = comment || alreadyRated.comment;
+      alreadyRated.status = "pending"; // reset về pending khi edit
     } else {
       product.ratings.push({
         userId: req.user._id,
         rating,
+        comment: comment || "",
+        status: "pending",
       });
     }
 
@@ -286,12 +295,98 @@ const deleteProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
 
   if (product) {
+    if (product.image) {
+      const publicId = product.image.split("/").slice(-2).join("/").split(".")[0];
+      await cloudinary.uploader.destroy(publicId);
+    }
     await product.deleteOne();
     res.json({ message: "Product removed" });
   } else {
     res.status(404);
     throw new Error("Product not found");
   }
+});
+
+// @desc    Get all reviews (admin)
+// @route   GET /api/reviews
+// @access  Private/Admin
+const getAllReviews = asyncHandler(async (req, res) => {
+  const { status } = req.query; // "pending" | "approved"
+
+  const products = await Product.find({ "ratings.0": { $exists: true } })
+    .populate("ratings.userId", "name email")
+    .select("name ratings");
+
+  let reviews = [];
+  products.forEach((product) => {
+    product.ratings.forEach((r) => {
+      if (!status || r.status === status) {
+        reviews.push({
+          _id: r._id,
+          productId: product._id,
+          productName: product.name,
+          userId: r.userId,
+          rating: r.rating,
+          comment: r.comment,
+          status: r.status,
+          createdAt: r.createdAt,
+        });
+      }
+    });
+  });
+
+  // Sort mới nhất lên đầu
+  reviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  res.json(reviews);
+});
+
+// @desc    Approve a review
+// @route   PUT /api/reviews/:productId/:reviewId/approve
+// @access  Private/Admin
+const approveReview = asyncHandler(async (req, res) => {
+  const { productId, reviewId } = req.params;
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  const review = product.ratings.id(reviewId);
+  if (!review) {
+    res.status(404);
+    throw new Error("Review not found");
+  }
+
+  review.status = "approved";
+  await product.save();
+
+  res.json({ message: "Review approved" });
+});
+
+// @desc    Reject (delete) a review
+// @route   DELETE /api/reviews/:productId/:reviewId
+// @access  Private/Admin
+const deleteReview = asyncHandler(async (req, res) => {
+  const { productId, reviewId } = req.params;
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  const review = product.ratings.id(reviewId);
+  if (!review) {
+    res.status(404);
+    throw new Error("Review not found");
+  }
+
+  review.deleteOne();
+  await product.save();
+
+  res.json({ message: "Review deleted" });
 });
 
 export {
@@ -301,4 +396,7 @@ export {
   updateProduct,
   rateProduct,
   deleteProduct,
+  getAllReviews,
+  approveReview,
+  deleteReview,
 };

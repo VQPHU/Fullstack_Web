@@ -11,7 +11,6 @@ interface ProductDescriptionProps {
   product?: Product;
 }
 
-// ---- Star Picker cho Form Đánh giá ----
 const StarPicker = ({
   value,
   onChange,
@@ -33,8 +32,8 @@ const StarPicker = ({
         >
           <Star
             className={`w-7 h-7 transition-colors ${star <= (hovered || value)
-                ? "fill-[#4BBFB0] text-[#4BBFB0]"
-                : "fill-none text-gray-300"
+              ? "fill-[#4BBFB0] text-[#4BBFB0]"
+              : "fill-none text-gray-300"
               }`}
           />
         </button>
@@ -105,7 +104,6 @@ const ReviewsSection = ({ product }: { product?: Product }) => {
         </h3>
       </div>
 
-      {/* Empty State theo ảnh 3 */}
       {reviews.length === 0 && !showForm ? (
         <div className="border border-gray-100 bg-gray-50/50 rounded-xl p-12 flex flex-col items-center justify-center space-y-3">
           <div className="flex gap-1">
@@ -131,8 +129,8 @@ const ReviewsSection = ({ product }: { product?: Product }) => {
                       <Star
                         key={s}
                         className={`w-3.5 h-3.5 ${s <= review.rating
-                            ? "fill-[#4BBFB0] text-[#4BBFB0]"
-                            : "text-gray-200"
+                          ? "fill-[#4BBFB0] text-[#4BBFB0]"
+                          : "text-gray-200"
                           }`}
                       />
                     ))}
@@ -150,7 +148,6 @@ const ReviewsSection = ({ product }: { product?: Product }) => {
         </div>
       )}
 
-      {/* Footer Action theo ảnh 3 */}
       <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
         <span className="font-bold text-gray-900">Write a Review</span>
         {isAuthenticated && !showForm && (
@@ -228,7 +225,6 @@ export default function ProductDescription({ product }: ProductDescriptionProps)
   ];
 
   return (
-    // Max width to match the layout in images
     <div className="w-full mx-auto space-y-8">
       <Card className="mx-auto border border-gray-100 shadow-sm rounded-2xl">
         <CardContent className="p-8 space-y-4">
@@ -246,7 +242,6 @@ export default function ProductDescription({ product }: ProductDescriptionProps)
         </CardContent>
       </Card>
 
-      {/* Phần 2: Specifications (Ảnh 2 - Dạng bảng) */}
       <Card className="border border-gray-100 shadow-sm rounded-2xl">
         <CardContent className="p-8 space-y-6">
           <div className="flex items-center gap-3 mb-2">
@@ -258,14 +253,13 @@ export default function ProductDescription({ product }: ProductDescriptionProps)
             </h3>
           </div>
 
-          {/* Cấu trúc bảng Table giống ảnh 2 */}
           <div className="border border-gray-100 rounded-xl overflow-hidden text-sm">
             {specificationsData.map((item, idx) => (
               <div
                 key={idx}
                 className={`grid grid-cols-2 p-4 items-center ${idx !== specificationsData.length - 1
-                    ? "border-b border-gray-50"
-                    : ""
+                  ? "border-b border-gray-50"
+                  : ""
                   }`}
               >
                 <span className="font-bold text-gray-900">
@@ -291,7 +285,6 @@ export default function ProductDescription({ product }: ProductDescriptionProps)
         </CardContent>
       </Card>
 
-      {/* Phần 3: Reviews (Ảnh 3 - Bao gồm cả Form đánh giá) */}
       <Card className="border border-gray-100 shadow-sm rounded-2xl">
         <CardContent className="p-8">
           <ReviewsSection product={product} />

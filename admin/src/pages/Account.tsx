@@ -242,8 +242,8 @@ const Account = () => {
         {/* ── Header ── */}
         <motion.div variants={item} className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Account Overview</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h1 className="text-3xl font-bold text-gray-900">Account Overview</h1>
+            <p className="text-gray-600 my-0.5">
               Complete analytics and insights for your e-commerce business
             </p>
           </div>

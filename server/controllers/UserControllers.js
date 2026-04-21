@@ -51,9 +51,10 @@ const getUserById = asyncHandler(async (req, res) => {
         ("-password");
 
     if (user) {
-        res.json(user);
-    } else
-        res.json(404);
+        return res.json(user);
+    }
+
+    res.status(404);
     throw new Error("User not found");
 })
 

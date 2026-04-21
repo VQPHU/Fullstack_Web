@@ -18,6 +18,9 @@ import Product_Types from './pages/Producttypes'
 import Addresses from './pages/Addresses'
 import AdsBanners from './pages/AdsBanners'
 import Reviews from './pages/Reviews'
+import Notifications from './pages/Notifications'
+import Employees from './pages/Employees'
+import Salaries from './pages/Salaries'
 
 
 const router = createBrowserRouter([
@@ -80,6 +83,18 @@ const router = createBrowserRouter([
         path: "/dashboard/reviews",
         element: <Reviews />
       },
+      {
+        path: "/dashboard/notifications",
+        element: <Notifications />
+      },
+      {
+        path: "/dashboard/employees",
+        element: <Employees />
+      },
+      {
+        path: "/dashboard/salaries",
+        element: <Salaries />
+      }
     ],
   },
 

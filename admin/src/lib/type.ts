@@ -239,3 +239,19 @@ export interface Review {
     status: "pending" | "approved";
     createdAt: string;
 }
+
+export type EmployeeRole = "incharge" | "call_center" | "accounts" | "delivery" | "packer";
+
+export interface Employee {
+    _id: string;
+    employeeId: string;
+    fullName: string;
+    email: string;
+    gender?: "male" | "female" | "other";
+    dateOfBirth?: string;
+    hometown?: string;
+    university?: string;
+    role: EmployeeRole;
+    avatar?: string;
+    createdAt: string;
+}

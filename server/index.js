@@ -22,6 +22,8 @@ import paymentRoutes from './routes/paymentRoutes.js'
 import notificationRoutes from './routes/notificationRoutes.js'
 import productTypeRoutes from './routes/Producttyperoutes.js'
 import adsBannerRoutes from "./routes/adsBannerRoutes.js";
+import employeeRoutes from "./routes/employeeRoutes.js";
+import salaryRoutes from "./routes/Salaryroute.js";
 
 // Load env vars
 dotenv.config();
@@ -95,6 +97,8 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/product-types", productTypeRoutes);
 app.use("/api/ads-banners", adsBannerRoutes);
+app.use("/api/employees", employeeRoutes);
+app.use("/api/salaries", salaryRoutes);
 
 // API Documentation
 app.use(

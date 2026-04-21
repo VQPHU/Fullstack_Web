@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "./ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Bookmark, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard, LogOut, Package, ShoppingBag, Tag, User, Users, MapPin, Star } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard, LogOut, Package, ShoppingBag, Tag, User, Users, MapPin, Star, Bell, UserCheck, DollarSign } from "lucide-react";
 import useAuthStore from "@/store/useAuthStore";
 import { NavLink, useLocation } from "react-router";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -47,6 +47,20 @@ const CustomersItems = [
     label: "Addresses",
   },
 ];
+
+const EmployeesItems = [
+  {
+    to: "/dashboard/employees",
+    icon: <UserCheck size={20} />,
+    label: "Employees"
+  },
+  {
+    to: "/dashboard/salaries",
+    icon: <DollarSign size={20} />,
+    label: "Salaries",
+  },
+];
+
 
 const salesItems = [
   {
@@ -94,6 +108,11 @@ const MarkettingItems = [
     to: "/dashboard/ads-banners",
     icon: <LayoutGrid size={20} />,
     label: "Ads Banners",
+  },
+  {
+    to: "/dashboard/notifications",
+    icon: <Bell size={20} />,
+    label: "Notifications",
   },
   {
     to: "/dashboard/reviews",
@@ -177,6 +196,36 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
               <AccordionContent className="pb-0 px-2 py-1">
                 <div className="space-y-1 pb-3">
                   {CustomersItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "flex items-center p-3 pl-8 rounded-lg text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm",
+                        pathname === item.to
+                          ? "bg-gradient-to-r from-[#29beb3]/20 to-[#a96bde]/20 text-white shadow-lg shadow-[#29beb3]/20 ring-1 ring-[#29beb3]/30 border border-white/10 backdrop-blur-sm"
+                          : "text-slate-300 hover:scale-102"
+                      )}
+                    >
+                      <span>{item.icon}</span>
+                      {open && item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="employees-management" className="border-none">
+              <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
+                <div className="flex items-center gap-3">
+                  <UserCheck size={20} />
+                  {open && "HR Management"}
+                </div>
+              </AccordionTrigger>
+
+              <AccordionContent className="pb-0 px-2 py-1">
+                <div className="space-y-1 pb-3">
+                  {EmployeesItems.map((item) => (
                     <NavLink
                       key={item.to}
                       to={item.to}

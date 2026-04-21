@@ -89,3 +89,17 @@ export const adsBannerSchema = z.object({
         message: "Please select a valid status",
     }),
 });
+
+export const employeeSchema = z.object({
+    employeeId: z.string().min(1, "Employee ID is required"),
+    fullName: z.string().min(2, "Full name must be at least 2 characters"),
+    email: z.string().email("Please enter a valid email address"),
+    gender: z.enum(["male", "female", "other"]).optional(),
+    dateOfBirth: z.string().optional(),
+    hometown: z.string().optional(),
+    university: z.string().optional(),
+    role: z.enum(["incharge", "call_center", "accounts", "delivery", "packer"], {
+        message: "Please select a valid role",
+    }),
+    avatar: z.string().optional(),
+});

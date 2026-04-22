@@ -255,3 +255,25 @@ export interface Employee {
     avatar?: string;
     createdAt: string;
 }
+
+export interface Salary {
+    _id?: string;
+    employee: Employee;
+    period: string;
+    baseSalary: number;
+    bonus: number;
+    allowance: number;
+    tax: number;
+    netSalary: number;
+    status: "paid" | "unpaid";
+}
+
+export const ROLE_LABELS: Record<EmployeeRole, string> = {
+    call_center: "Call Center",
+    packer: "Packer",
+    delivery: "Delivery",
+    accounts: "Accounts",
+    incharge: "Incharge",
+};
+
+

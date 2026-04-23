@@ -80,7 +80,7 @@ export const productTypeSchema = z.object({
 export const adsBannerSchema = z.object({
     name: z.string().min(1, "Name is required"),
     title: z.string().min(1, "Title is required"),
-    image: z.string().min(1, "Image is required"), 
+    image: z.string().min(1, "Image is required"),
     type: z.enum(["advertisement", "promotion", "banner"], {
         message: "Please select a valid type",
     }),
@@ -113,4 +113,27 @@ export const salarySchema = z.object({
     tax: z.number().min(0),
     netSalary: z.number().min(0),
     status: z.enum(["paid", "unpaid"]),
+});
+
+export const socialMediaSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    platform: z.enum([
+        "Facebook", "Instagram", "Twitter", "LinkedIn",
+        "YouTube", "TikTok", "Pinterest", "WhatsApp", "Telegram", "Other"
+    ], { message: "Please select a valid platform" }),
+    url: z.string().url("Please enter a valid URL"),
+    icon: z.string().optional(),
+    order: z.number().min(0, "Order must be a positive number"),
+    isActive: z.boolean(),
+});
+
+export const websiteIconSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    key: z.string().min(1, "Key is required"),
+    category: z.enum(["Logo", "Favicon", "Social Media", "Footer", "Header", "Other"], {
+        message: "Please select a valid category",
+    }),
+    imageUrl: z.string().optional(),
+    order: z.number().min(0, "Order must be a positive number"),
+    isActive: z.boolean(),
 });

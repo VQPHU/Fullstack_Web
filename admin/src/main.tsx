@@ -21,6 +21,9 @@ import Reviews from './pages/Reviews'
 import Notifications from './pages/Notifications'
 import Employees from './pages/Employees'
 import Salaries from './pages/Salaries'
+import SocialMedia from './pages/SocialMedia'
+import WebsiteConfig from './pages/WebsiteConfig'
+import WebsiteIcons from './pages/WebsiteIcons'
 
 
 const router = createBrowserRouter([
@@ -94,6 +97,18 @@ const router = createBrowserRouter([
       {
         path: "/dashboard/salaries",
         element: <Salaries />
+      },
+      {
+        path: "dashboard/social-media",
+        element: <SocialMedia />
+      },
+      {
+        path: "dashboard/website-config",
+        element: <WebsiteConfig />
+      },
+      {
+        path: "dashboard/website-icons",
+        element: <WebsiteIcons />
       }
     ],
   },

@@ -276,4 +276,26 @@ export const ROLE_LABELS: Record<EmployeeRole, string> = {
     incharge: "Incharge",
 };
 
+export type SocialMedia = {
+    _id: string;
+    name: string;
+    platform: "Facebook" | "Instagram" | "Twitter" | "LinkedIn" | "YouTube" | "TikTok" | "Pinterest" | "WhatsApp" | "Telegram" | "Other";
+    url: string;
+    icon?: string;
+    order: number;
+    isActive: boolean;
+    createdAt: string;
+};
 
+export type WebsiteIconCategory = "Logo" | "Favicon" | "Social Media" | "Footer" | "Header" | "Other";
+
+export type WebsiteIcon = {
+    _id: string;
+    name: string;
+    key: string;
+    category: WebsiteIconCategory;
+    imageUrl?: string;
+    order: number;
+    isActive: boolean;
+    createdAt: string;
+};

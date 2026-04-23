@@ -24,6 +24,7 @@ import Salaries from './pages/Salaries'
 import SocialMedia from './pages/SocialMedia'
 import WebsiteConfig from './pages/WebsiteConfig'
 import WebsiteIcons from './pages/WebsiteIcons'
+import ComponentTypes from './pages/ComponentTypes'
 
 
 const router = createBrowserRouter([
@@ -109,6 +110,9 @@ const router = createBrowserRouter([
       {
         path: "dashboard/website-icons",
         element: <WebsiteIcons />
+      },
+      {path: "/dashboard/component-types",
+        element: <ComponentTypes />
       }
     ],
   },

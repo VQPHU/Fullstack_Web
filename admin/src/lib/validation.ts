@@ -137,3 +137,16 @@ export const websiteIconSchema = z.object({
     order: z.number().min(0, "Order must be a positive number"),
     isActive: z.boolean(),
 });
+
+export const componentTypeSchema = z.object({
+    name: z
+        .string()
+        .min(1, "Name is required")
+        .regex(
+            /^[a-z0-9_]+$/,
+            "Name must contain only lowercase letters, numbers, and underscores"
+        ),
+    isActive: z.boolean(),
+});
+
+export type ComponentTypeFormData = z.infer<typeof componentTypeSchema>;

@@ -299,3 +299,9 @@ export type WebsiteIcon = {
     isActive: boolean;
     createdAt: string;
 };
+
+export interface ComponentType {
+    _id: string;
+    name: string;
+    isActive: boolean;
+}

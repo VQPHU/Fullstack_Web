@@ -14,6 +14,8 @@ interface ProductTypesResponse {
   productTypes: ProductType[];
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   const brands = await fetchData<Brand[]>("/brands");
   const productTypesData = await fetchData<ProductTypesResponse>(
@@ -21,20 +23,30 @@ export default async function Home() {
   );
   const featuredProductTypes = productTypesData.productTypes || [];
 
+  const homepageData = await fetchData<{ components: { name: string }[] }>(
+    "/components/homepage",
+    { next: { revalidate: 0 } }
+  );
+
+  const activeComponents = homepageData?.components?.map((c) => c.name) || [];
+
+  console.log("Active Components logic:", activeComponents);
+
   return (
     <div>
       <Container className="min-h-screen flex py-7 gap-3">
-        <CategoriesSection />
+        {activeComponents.includes("categories") && <CategoriesSection />}
         <div className="flex-1">
-          <Banner />
-          <ProductsList />
-          <HomeBrand brands={brands} />
-          {featuredProductTypes.map((productType) => (
-            <ProductTypeShowcaseSection
-              key={productType._id}
-              productType={productType}
-            />
-          ))}
+          {activeComponents.includes("home_banner") && <Banner />}
+          {activeComponents.includes("best_deals") && <ProductsList />}
+          {activeComponents.includes("home_brands") && <HomeBrand brands={brands} />}
+          {activeComponents.includes("home_product_types") &&
+            featuredProductTypes.map((productType) => (
+              <ProductTypeShowcaseSection
+                key={productType._id}
+                productType={productType}
+              />
+            ))}
           <FeaturedServicesSection />
           {/* <ComfyApparelSection/>
           <BabyTravelSection/> */}

@@ -1,6 +1,4 @@
 "use client";
-
-import { logo as defaultLogo } from "../../assets/image";
 import { cn } from "../../lib/utils";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,14 +14,16 @@ interface WebsiteIcon {
 
 const Logo = ({ className }: { className?: string }) => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const getLogo = async () => {
       try {
-        // Gọi API lấy icons với category là Logo
-        const response = await fetchData<{ icons: WebsiteIcon[] }>("/website-icons?category=Logo");
-        if (response?.icons) {
-          // Lọc icon đang hoạt động và lấy cái có thứ tự (order) nhỏ nhất
+        const response = await fetchData<{ icons: WebsiteIcon[] }>(
+          "/website-icons?category=Logo"
+        );
+
+        if (response?.icons?.length) {
           const activeLogo = response.icons
             .filter((icon) => icon.isActive)
             .sort((a, b) => a.order - b.order)[0];
@@ -34,15 +34,24 @@ const Logo = ({ className }: { className?: string }) => {
         }
       } catch (error) {
         console.error("Failed to fetch logo from admin", error);
+      } finally {
+        setLoading(false);
       }
     };
+
     getLogo();
   }, []);
+
+  // ⏳ đang load → không render gì (hoặc skeleton)
+  if (loading) return null;
+
+  // ❌ không có logo từ admin → không hiển thị
+  if (!logoUrl) return null;
 
   return (
     <Link href={"/"}>
       <Image
-        src={logoUrl || defaultLogo}
+        src={logoUrl}
         alt="logo"
         width={200}
         height={60}

@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "./ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Bookmark, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard, LogOut, Package, ShoppingBag, Tag, User, Users, MapPin, Star, Bell, UserCheck, DollarSign, Settings, Share2, Globe, Image } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, FileText, Layers, LayoutDashboard, LogOut, Package, ShoppingBag, Tag, User, Users, MapPin, Star, Bell, UserCheck, DollarSign, Settings, Share2, Globe, Image, Grid3x3 } from "lucide-react";
 import useAuthStore from "@/store/useAuthStore";
 import { NavLink, useLocation } from "react-router";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -136,7 +136,12 @@ const SettingsItems = [
     to: "dashboard/website-icons",
     icon: <Image size={20} />,
     label: "Website Icons",
-  }
+  },
+  {
+    to: "/dashboard/component-types",
+    icon: <Grid3x3 size={20} />,
+    label: "Component Types",
+  },
 ];
 
 const Sidebar = ({ open, setOpen }: SidebarProps) => {

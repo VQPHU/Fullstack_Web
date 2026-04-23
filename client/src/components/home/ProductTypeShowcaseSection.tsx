@@ -21,18 +21,23 @@ const ProductTypeShowcaseSection = ({
 }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [adsBanners, setAdsBanners] = useState<AdsBanner[]>([]);
+  const [activeComponents, setActiveComponents] = useState<string[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [productsRes, bannersRes] = await Promise.all([
+        const [productsRes, bannersRes, homepageData] = await Promise.all([
           fetchData<ProductsResponse>(
             `/products?productType=${productType._id}&limit=8&sortOrder=desc`
           ),
           fetchData<AdsBanner[]>(`/ads-banners?status=Active`),
+          fetchData<{ components: { name: string }[] }>("/components/homepage"),
         ]);
+
+        const active = homepageData?.components?.map((c) => c.name) || [];
+        setActiveComponents(active);
 
         setProducts(productsRes.products || []);
 
@@ -85,7 +90,7 @@ const ProductTypeShowcaseSection = ({
       </div>
 
       {/* Ads Banner Slider */}
-      {adsBanners.length > 0 && (
+      {activeComponents.includes("ads_banner") && adsBanners.length > 0 && (
         <div className="w-full my-4 rounded-xl overflow-hidden relative group cursor-pointer">
           {/* Ảnh */}
           <img

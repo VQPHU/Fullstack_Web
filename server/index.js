@@ -26,6 +26,7 @@ import employeeRoutes from "./routes/employeeRoutes.js";
 import salaryRoutes from "./routes/Salaryroute.js";
 import socialMediaRoutes from "./routes/socialMediaRoutes.js";
 import websiteIconRoutes from "./routes/websiteIconRoutes.js";
+import componentRoutes from "./routes/componentRoutes.js";
 
 // Load env vars
 dotenv.config();
@@ -103,7 +104,7 @@ app.use("/api/employees", employeeRoutes);
 app.use("/api/salaries", salaryRoutes);
 app.use("/api/social-media", socialMediaRoutes);
 app.use("/api/website-icons", websiteIconRoutes);
-
+app.use("/api/components", componentRoutes);
 
 // API Documentation
 app.use(

@@ -12,7 +12,6 @@ const Banner = async () => {
     } catch (error) {
         console.log("error", error);
     }
-    console.log(banners);
     const imageOne = banners[0];
     const imageTwo = banners[1];
 

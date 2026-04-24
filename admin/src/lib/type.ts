@@ -306,8 +306,6 @@ export interface ComponentType {
     isActive: boolean;
 }
 
-// ─── Thêm vào file type.ts ────────────────────────────────────────────────────
-
 export type PageType = "home" | "product" | "blog" | "category" | "about";
 
 export interface PageComponent {
@@ -337,5 +335,83 @@ export interface PageComponentFormData {
     description: string;
     displayOrder: number;
     isActive: boolean;
-    config: string; // JSON string trong form, parse trước khi gửi API
+    config: string;
+}
+
+export type NotificationType =
+    | "announcement"
+    | "offer"
+    | "deal"
+    | "promotion"
+    | "alert"
+    | "admin_message"
+    | "general";
+
+export type NotificationPriority = "low" | "normal" | "high" | "urgent";
+
+export type NotificationTargetAudience = "all" | "specific";
+
+export type ImageMode = "upload" | "url";
+
+export interface NotificationRecipient {
+    userId: string;
+    isRead: boolean;
+    readAt: string | null;
+}
+
+export interface Notification {
+    _id: string;
+    title: string;
+    message: string;
+    type: NotificationType;
+    priority: NotificationPriority;
+    image: string | null;
+    actionButtonText: string | null;
+    actionButtonUrl: string | null;
+    targetAudience: NotificationTargetAudience;
+    totalSent: number;
+    totalRead: number;
+    sentBy: {
+        _id: string;
+        name: string;
+        email: string;
+        avatar: string;
+    };
+    createdAt: string;
+}
+
+export interface NotificationStats {
+    totalSent: number;
+    totalRead: number;
+    readRate: number;
+    bulkSends: number;
+    totalUsers: number;
+}
+
+export interface NotificationUser {
+    _id: string;
+    name: string;
+    email: string;
+    avatar: string;
+}
+
+export interface NotificationUsersResponse {
+    success: boolean;
+    users: NotificationUser[];
+    total: number;
+    page: number;
+    totalPages: number;
+}
+
+export interface SendNotificationPayload {
+    title: string;
+    message: string;
+    type: NotificationType;
+    priority: NotificationPriority;
+    imageUrl?: string;
+    imageBase64?: string;
+    actionButtonText?: string;
+    actionButtonUrl?: string;
+    targetAudience: NotificationTargetAudience;
+    userIds?: string[];
 }

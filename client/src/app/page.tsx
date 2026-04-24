@@ -18,40 +18,44 @@ export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   const brands = await fetchData<Brand[]>("/brands");
-  const productTypesData = await fetchData<ProductTypesResponse>(
+
+  const { productTypes = [] } = await fetchData<ProductTypesResponse>(
     "/product-types?status=Active&perPage=6&sortOrder=desc"
   );
-  const featuredProductTypes = productTypesData.productTypes || [];
 
-  const homepageData = await fetchData<{ components: { name: string }[] }>(
-    "/components/homepage",
-    { next: { revalidate: 0 } }
+  const { components = [] } = await fetchData<{
+    components: { componentType: string }[];
+  }>("/page-components/public/home", {
+    next: { revalidate: 0 },
+  });
+
+  const hasCategories = components.some(
+    (c) => c.componentType === "categories"
   );
 
-  const activeComponents = homepageData?.components?.map((c) => c.name) || [];
-
-  console.log("Active Components logic:", activeComponents);
+  const componentMap: Record<string, (key: number) => React.ReactNode> = {
+    home_banner: (key) => <Banner key={key} />,
+    best_deals: (key) => <ProductsList key={key} />,
+    home_brands: (key) => <HomeBrand key={key} brands={brands} />,
+    featured_services: (key) => <FeaturedServicesSection key={key} />,
+    home_product_types: () =>
+      productTypes.map((pt) => (
+        <ProductTypeShowcaseSection key={pt._id} productType={pt} />
+      )),
+  };
 
   return (
-    <div>
-      <Container className="min-h-screen flex py-7 gap-3">
-        {activeComponents.includes("categories") && <CategoriesSection />}
-        <div className="flex-1">
-          {activeComponents.includes("home_banner") && <Banner />}
-          {activeComponents.includes("best_deals") && <ProductsList />}
-          {activeComponents.includes("home_brands") && <HomeBrand brands={brands} />}
-          {activeComponents.includes("home_product_types") &&
-            featuredProductTypes.map((productType) => (
-              <ProductTypeShowcaseSection
-                key={productType._id}
-                productType={productType}
-              />
-            ))}
-          <FeaturedServicesSection />
-          {/* <ComfyApparelSection/>
-          <BabyTravelSection/> */}
-        </div>
-      </Container>
-    </div>
+    <Container className="min-h-screen flex py-7 gap-3">
+      {hasCategories && <CategoriesSection />}
+
+      <div className="flex-1 space-y-10">
+        {components.map((comp, idx) => {
+          if (comp.componentType === "categories") return null;
+
+          const render = componentMap[comp.componentType];
+          return render ? render(idx) : null;
+        })}
+      </div>
+    </Container>
   );
 }

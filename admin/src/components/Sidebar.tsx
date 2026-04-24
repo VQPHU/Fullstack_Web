@@ -123,17 +123,17 @@ const MarkettingItems = [
 
 const SettingsItems = [
   {
-    to: "dashboard/social-media",
+    to: "/dashboard/social-media",
     icon: <Share2 size={20} />,
     label: "Social Media",
   },
   {
-    to: "dashboard/website-config",
+    to: "/dashboard/website-config",
     icon: <Globe size={20} />,
     label: "Website Config",
   },
   {
-    to: "dashboard/website-icons",
+    to: "/dashboard/website-icons",
     icon: <Image size={20} />,
     label: "Website Icons",
   },
@@ -206,9 +206,12 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
               pathname={pathname}
             />
           ))}
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion type="single" collapsible className="w-full" key={open ? "customers-open" : "customers-closed"}>
             <AccordionItem value="customers" className="border-none">
-              <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
+              <AccordionTrigger
+                onClick={() => !open && setOpen(true)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline"
+              >
                 <div className="flex items-center gap-3">
                   <Users size={20} />
                   {open && "Customers"}
@@ -236,9 +239,12 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion type="single" collapsible className="w-full" key={open ? "employees-open" : "employees-closed"}>
             <AccordionItem value="employees-management" className="border-none">
-              <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
+              <AccordionTrigger
+                onClick={() => !open && setOpen(true)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline"
+              >
                 <div className="flex items-center gap-3">
                   <UserCheck size={20} />
                   {open && "HR Management"}
@@ -267,9 +273,12 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
             </AccordionItem>
           </Accordion>
           {/* Sales & Orders */}
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion type="single" collapsible className="w-full" key={open ? "sales-open" : "sales-closed"}>
             <AccordionItem value="sales-orders" className="border-none">
-              <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
+              <AccordionTrigger
+                onClick={() => !open && setOpen(true)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline"
+              >
                 <div className="flex items-center gap-3">
                   <Package size={20} />
                   {open && "Sales & Orders"}
@@ -297,9 +306,12 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion type="single" collapsible className="w-full" key={open ? "product-catalog-open" : "product-catalog-closed"}>
             <AccordionItem value="product-catalog" className="border-none">
-              <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
+              <AccordionTrigger
+                onClick={() => !open && setOpen(true)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline"
+              >
                 <div className="flex items-center gap-3">
                   <ShoppingBag size={20} />
                   {open && "Product Catalog"}
@@ -326,9 +338,12 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion type="single" collapsible className="w-full" key={open ? "marketing-open" : "marketing-closed"}>
             <AccordionItem value="marketing" className="border-none">
-              <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
+              <AccordionTrigger
+                onClick={() => !open && setOpen(true)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline"
+              >
                 <div className="flex items-center gap-3">
                   <Layers size={20} />
                   {open && "Marketing"}
@@ -356,9 +371,12 @@ const Sidebar = ({ open, setOpen }: SidebarProps) => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <Accordion type="single" collapsible className="w-full">
+          <Accordion type="single" collapsible className="w-full" key={open ? "settings-open" : "settings-closed"}>
             <AccordionItem value="settings" className="border-none">
-              <AccordionTrigger className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline">
+              <AccordionTrigger
+                onClick={() => !open && setOpen(true)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm font-medium hoverEffect gap-3 overflow-hidden text-white/80 hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 hover:text-white hover:shadow-lg hover:backdrop-blur-sm no-underline hover:no-underline"
+              >
                 <div className="flex items-center gap-3">
                   <Settings size={20} />
                   {open && "Settings"}

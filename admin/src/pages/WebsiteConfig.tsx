@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
-import { PageComponent, ComponentTypeOption, PageType } from "@/lib/type";
+import { PageComponent, ComponentTypeOption, PageType, ComponentType } from "@/lib/type";
 import { pageComponentSchema, PageComponentFormData } from "@/lib/validation";
 import useAuthStore from "@/store/useAuthStore";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -57,11 +57,11 @@ import { toast } from "sonner";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PAGE_TABS: { key: PageType; label: string }[] = [
-    { key: "home",     label: "Home Page"     },
-    { key: "product",  label: "Product Page"  },
-    { key: "blog",     label: "Blog Page"     },
+    { key: "home", label: "Home Page" },
+    { key: "product", label: "Product Page" },
+    { key: "blog", label: "Blog Page" },
     { key: "category", label: "Category Page" },
-    { key: "about",    label: "About Page"    },
+    { key: "about", label: "About Page" },
 ];
 
 const fmtDateTime = (iso: string) =>
@@ -77,19 +77,20 @@ const WebsiteConfig = () => {
     const { checkIsAdmin } = useAuthStore();
     const isAdmin = checkIsAdmin();
 
-    const [activeTab, setActiveTab]         = useState<PageType>("home");
+    const [activeTab, setActiveTab] = useState<PageType>("home");
     const [allComponents, setAllComponents] = useState<Record<PageType, PageComponent[]>>({
         home: [], product: [], blog: [], category: [], about: [],
     });
+    const [masterTypes, setMasterTypes] = useState<ComponentType[]>([]);
     const [componentTypes, setComponentTypes] = useState<ComponentTypeOption[]>([]);
-    const [loading, setLoading]       = useState(false);
+    const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
-    const [formLoading, setFormLoading]   = useState(false);
+    const [formLoading, setFormLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
-    const [isAddModalOpen,    setIsAddModalOpen]    = useState(false);
-    const [isEditModalOpen,   setIsEditModalOpen]   = useState(false);
-    const [isViewModalOpen,   setIsViewModalOpen]   = useState(false);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [selectedComponent, setSelectedComponent] = useState<PageComponent | null>(null);
 
@@ -117,9 +118,9 @@ const WebsiteConfig = () => {
         if (showRefreshing) setRefreshing(true);
         else setLoading(true);
         try {
-            const [compRes, typeRes] = await Promise.all([
+            const [compRes, masterRes] = await Promise.all([
                 axiosPrivate.get("/page-components"),
-                axiosPrivate.get("/page-components/component-types"),
+                axiosPrivate.get("/components"), // Lấy trạng thái từ Master Switch
             ]);
 
             const raw = compRes.data?.components ?? [];
@@ -135,8 +136,20 @@ const WebsiteConfig = () => {
                 Object.assign(grouped, raw);
             }
 
+            const typesFromMaster: ComponentType[] = masterRes.data?.components ?? [];
+            setMasterTypes(typesFromMaster);
+
+            // Chỉ cho phép chọn các loại đang ACTIVE ở Master
+            const activeOptions: ComponentTypeOption[] = typesFromMaster
+                .filter(t => t.isActive)
+                .map(t => ({
+                    value: t.name,
+                    label: t.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+                }));
+
             setAllComponents(grouped);
-            setComponentTypes(typeRes.data?.types ?? []);
+            setComponentTypes(activeOptions);
+
             if (showRefreshing) toast.success("Refreshed successfully");
         } catch {
             toast.error("Failed to load data");
@@ -155,7 +168,7 @@ const WebsiteConfig = () => {
     // ── Drag & Drop ──────────────────────────────────────────────────────────
     const handleDragEnd = async () => {
         const from = dragItem.current;
-        const to   = dragOver.current;
+        const to = dragOver.current;
         if (from === null || to === null || from === to) return;
 
         const items = [...currentComponents];
@@ -203,12 +216,12 @@ const WebsiteConfig = () => {
     const handleOpenEdit = (comp: PageComponent) => {
         setSelectedComponent(comp);
         formEdit.reset({
-            pageType:      comp.pageType,
+            pageType: comp.pageType,
             componentType: comp.componentType,
-            title:         comp.title,
-            description:   comp.description ?? "",
-            displayOrder:  comp.displayOrder,
-            isActive:      comp.isActive,
+            title: comp.title,
+            description: comp.description ?? "",
+            displayOrder: comp.displayOrder,
+            isActive: comp.isActive,
         });
         setIsEditModalOpen(true);
     };
@@ -421,25 +434,23 @@ const WebsiteConfig = () => {
             {/* Tabs */}
             <div className="flex gap-1 bg-muted/60 border rounded-xl p-1 w-fit">
                 {PAGE_TABS.map((tab) => {
-                    const count  = (allComponents[tab.key] ?? []).length;
+                    const count = (allComponents[tab.key] ?? []).length;
                     const active = activeTab === tab.key;
                     return (
                         <button
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key)}
-                            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                                active
+                            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${active
                                     ? "bg-background text-foreground shadow-sm"
                                     : "text-muted-foreground hover:text-foreground"
-                            }`}
+                                }`}
                         >
                             {tab.label}
                             {count > 0 && (
-                                <span className={`text-xs font-semibold rounded-full px-1.5 py-px ${
-                                    active
+                                <span className={`text-xs font-semibold rounded-full px-1.5 py-px ${active
                                         ? "bg-primary text-primary-foreground"
                                         : "bg-muted-foreground/20 text-muted-foreground"
-                                }`}>
+                                    }`}>
                                     {count}
                                 </span>
                             )}
@@ -487,9 +498,8 @@ const WebsiteConfig = () => {
                                 onDragEnter={() => { dragOver.current = idx; }}
                                 onDragEnd={handleDragEnd}
                                 onDragOver={(e) => e.preventDefault()}
-                                className={`flex items-center px-4 py-3 hover:bg-muted/30 transition-colors ${
-                                    idx < currentComponents.length - 1 ? "border-b" : ""
-                                } ${isAdmin ? "cursor-grab active:cursor-grabbing" : ""}`}
+                                className={`flex items-center px-4 py-3 hover:bg-muted/30 transition-colors ${idx < currentComponents.length - 1 ? "border-b" : ""
+                                    } ${isAdmin ? "cursor-grab active:cursor-grabbing" : ""}`}
                             >
                                 {/* Drag handle */}
                                 <GripVertical className="w-4 h-4 text-muted-foreground/40 mr-2 shrink-0" />
@@ -508,6 +518,12 @@ const WebsiteConfig = () => {
                                     {!comp.isActive && (
                                         <span className="text-xs font-medium bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
                                             Inactive
+                                        </span>
+                                    )}
+                                    {/* Hiển thị nếu loại linh kiện bị tắt ở Master */}
+                                    {masterTypes.find(t => t.name === comp.componentType)?.isActive === false && (
+                                        <span className="text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded border border-red-200">
+                                            Globally Disabled
                                         </span>
                                     )}
                                 </div>
@@ -555,11 +571,10 @@ const WebsiteConfig = () => {
                                     <span className="text-xs bg-muted px-2 py-0.5 rounded font-mono">
                                         {selectedComponent.componentType}
                                     </span>
-                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                                        selectedComponent.isActive
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${selectedComponent.isActive
                                             ? "bg-green-100 text-green-700"
                                             : "bg-yellow-100 text-yellow-700"
-                                    }`}>
+                                        }`}>
                                         {selectedComponent.isActive ? "Active" : "Inactive"}
                                     </span>
                                     <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
@@ -613,11 +628,11 @@ const WebsiteConfig = () => {
                                 </p>
                                 <div className="rounded-lg border p-3 space-y-2.5">
                                     {[
-                                        { label: "Component ID",    value: selectedComponent._id },
-                                        { label: "Created By",      value: selectedComponent.createdBy?.name ?? "{}" },
-                                        { label: "Created At",      value: fmtDateTime(selectedComponent.createdAt) },
+                                        { label: "Component ID", value: selectedComponent._id },
+                                        { label: "Created By", value: selectedComponent.createdBy?.name ?? "{}" },
+                                        { label: "Created At", value: fmtDateTime(selectedComponent.createdAt) },
                                         { label: "Last Updated By", value: selectedComponent.updatedBy?.name ?? "{}" },
-                                        { label: "Last Updated",    value: fmtDateTime(selectedComponent.updatedAt) },
+                                        { label: "Last Updated", value: fmtDateTime(selectedComponent.updatedAt) },
                                     ].map((row) => (
                                         <div key={row.label} className="flex justify-between items-start gap-4 border-b pb-2 last:border-0 last:pb-0">
                                             <span className="text-muted-foreground text-xs shrink-0">{row.label}</span>

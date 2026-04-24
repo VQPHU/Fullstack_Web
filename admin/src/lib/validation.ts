@@ -151,10 +151,6 @@ export const componentTypeSchema = z.object({
 
 export type ComponentTypeFormData = z.infer<typeof componentTypeSchema>;
 
-
-
-// ─── Thêm vào file validation.ts (hoặc schema.ts) ────────────────────────────
-
 export const pageComponentSchema = z.object({
     pageType: z.enum(["home", "product", "blog", "category", "about"], {
         message: "Please select a valid page type",
@@ -182,3 +178,59 @@ export const pageComponentSchema = z.object({
 });
 
 export type PageComponentFormData = z.infer<typeof pageComponentSchema>;
+
+export const notificationSchema = z
+    .object({
+        title: z.string().min(1, "Title is required"),
+        message: z.string().min(1, "Message is required"),
+        type: z.enum(
+            ["announcement", "offer", "deal", "promotion", "alert", "admin_message", "general"],
+            { message: "Please select a valid notification type" }
+        ),
+        priority: z.enum(["low", "normal", "high", "urgent"], {
+            message: "Please select a valid priority",
+        }),
+        imageMode: z.enum(["upload", "url"]),
+        imageUrl: z.string().optional(),
+        imageBase64: z.string().optional(),
+        actionButtonText: z.string().optional(),
+        actionButtonUrl: z.string().optional(),
+        targetAudience: z.enum(["all", "specific"]),
+        userIds: z.array(z.string()).optional(),
+    })
+    .superRefine((data, ctx) => {
+        // If imageMode is url, validate the URL format
+        if (data.imageMode === "url" && data.imageUrl && data.imageUrl.trim() !== "") {
+            try {
+                new URL(data.imageUrl);
+            } catch {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Please enter a valid image URL",
+                    path: ["imageUrl"],
+                });
+            }
+        }
+
+        // If targetAudience is specific, at least one user must be selected
+        if (data.targetAudience === "specific") {
+            if (!data.userIds || data.userIds.length === 0) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Please select at least one user",
+                    path: ["userIds"],
+                });
+            }
+        }
+
+        // If actionButtonUrl is provided, actionButtonText must also be provided
+        if (data.actionButtonUrl && !data.actionButtonText) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Action button text is required when URL is provided",
+                path: ["actionButtonText"],
+            });
+        }
+    });
+
+export type NotificationFormData = z.infer<typeof notificationSchema>;

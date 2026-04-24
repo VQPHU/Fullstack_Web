@@ -150,3 +150,35 @@ export const componentTypeSchema = z.object({
 });
 
 export type ComponentTypeFormData = z.infer<typeof componentTypeSchema>;
+
+
+
+// ─── Thêm vào file validation.ts (hoặc schema.ts) ────────────────────────────
+
+export const pageComponentSchema = z.object({
+    pageType: z.enum(["home", "product", "blog", "category", "about"], {
+        message: "Please select a valid page type",
+    }),
+    componentType: z.string().min(1, "Component type is required"),
+    title: z.string().min(1, "Title is required"),
+    description: z.string().optional().default(""),
+    displayOrder: z.number().min(0, "Display order must be a positive number"),
+    isActive: z.boolean().default(true),
+    config: z
+        .string()
+        .optional()
+        .default("{}")
+        .refine(
+            (val) => {
+                try {
+                    JSON.parse(val ?? "{}");
+                    return true;
+                } catch {
+                    return false;
+                }
+            },
+            { message: "Config must be valid JSON" }
+        ),
+});
+
+export type PageComponentFormData = z.infer<typeof pageComponentSchema>;

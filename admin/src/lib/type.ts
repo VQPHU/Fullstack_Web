@@ -305,3 +305,37 @@ export interface ComponentType {
     name: string;
     isActive: boolean;
 }
+
+// ─── Thêm vào file type.ts ────────────────────────────────────────────────────
+
+export type PageType = "home" | "product" | "blog" | "category" | "about";
+
+export interface PageComponent {
+    _id: string;
+    pageType: PageType;
+    componentType: string;
+    title: string;
+    description: string;
+    displayOrder: number;
+    isActive: boolean;
+    config: Record<string, unknown>;
+    createdBy: { _id: string; name: string; email: string } | null;
+    updatedBy: { _id: string; name: string; email: string } | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface ComponentTypeOption {
+    value: string;
+    label: string;
+}
+
+export interface PageComponentFormData {
+    pageType: PageType;
+    componentType: string;
+    title: string;
+    description: string;
+    displayOrder: number;
+    isActive: boolean;
+    config: string; // JSON string trong form, parse trước khi gửi API
+}

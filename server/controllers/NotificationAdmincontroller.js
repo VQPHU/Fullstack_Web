@@ -1,22 +1,23 @@
 import asyncHandler from "express-async-handler";
-import Notification from "../models/notificationModel.js";
+import NotificationAdmin from "../models/NotificationAdminModel.js";
 import User from "../models/userModels.js";
 import cloudinary from "../config/cloudinary.js";
+
 
 // =====================
 // GET /api/notifications/stats
 // Private/Admin
 // =====================
 const getNotificationStats = asyncHandler(async (req, res) => {
-    const allNotifications = await Notification.find({});
+    const allNotifications = await NotificationAdmin.find({});
 
     const totalSent = allNotifications.reduce(
-        (sum, n) => sum + n.recipients.length,
+        (sum, n) => sum + (n.recipients?.length || 0),
         0
     );
 
     const totalRead = allNotifications.reduce(
-        (sum, n) => sum + n.recipients.filter((r) => r.isRead).length,
+        (sum, n) => sum + (n.recipients?.filter((r) => r.isRead).length || 0),
         0
     );
 
@@ -47,7 +48,7 @@ const getNotificationStats = asyncHandler(async (req, res) => {
 // Private/Admin
 // =====================
 const getNotificationHistory = asyncHandler(async (req, res) => {
-    const notifications = await Notification.find({})
+    const notifications = await NotificationAdmin.find({})
         .populate("sentBy", "name email avatar")
         .sort({ createdAt: -1 });
 
@@ -61,8 +62,8 @@ const getNotificationHistory = asyncHandler(async (req, res) => {
         actionButtonText: n.actionButtonText,
         actionButtonUrl: n.actionButtonUrl,
         targetAudience: n.targetAudience,
-        totalSent: n.recipients.length,
-        totalRead: n.recipients.filter((r) => r.isRead).length,
+        totalSent: n.recipients?.length || 0,
+        totalRead: n.recipients?.filter((r) => r.isRead).length || 0,
         sentBy: n.sentBy,
         createdAt: n.createdAt,
     }));
@@ -155,7 +156,7 @@ const sendNotification = asyncHandler(async (req, res) => {
         recipients = allUsers.map((u) => ({ userId: u._id, isRead: false }));
     }
 
-    const notification = await Notification.create({
+    const notification = await NotificationAdmin.create({
         title,
         message,
         type: type || "announcement",
@@ -192,13 +193,13 @@ const sendNotification = asyncHandler(async (req, res) => {
 const markAsRead = asyncHandler(async (req, res) => {
     const { notificationId, userId } = req.params;
 
-    const notification = await Notification.findById(notificationId);
+    const notification = await NotificationAdmin.findById(notificationId);
     if (!notification) {
         res.status(404);
         throw new Error("Notification not found");
     }
 
-    const recipient = notification.recipients.find(
+    const recipient = notification.recipients?.find(
         (r) => r.userId.toString() === userId
     );
 
@@ -219,10 +220,41 @@ const markAsRead = asyncHandler(async (req, res) => {
     });
 });
 
+// GET /api/notification-admin/my
+// Private/User
+const getMyNotifications = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+
+    const notifications = await NotificationAdmin.find({
+        "recipients.userId": userId,
+    }).sort({ createdAt: -1 });
+
+    const result = notifications.map((n) => {
+        const recipient = n.recipients.find(
+            (r) => r.userId.toString() === userId.toString()
+        );
+        return {
+            _id: n._id,
+            title: n.title,
+            message: n.message,
+            type: n.type,
+            priority: n.priority,
+            image: n.image,
+            actionButtonText: n.actionButtonText,
+            actionButtonUrl: n.actionButtonUrl,
+            createdAt: n.createdAt,
+            isRead: recipient?.isRead || false,
+        };
+    });
+
+    res.status(200).json({ success: true, notifications: result });
+});
+
 export {
     getNotificationStats,
     getNotificationHistory,
     getUsersForNotification,
     sendNotification,
     markAsRead,
+    getMyNotifications,
 };

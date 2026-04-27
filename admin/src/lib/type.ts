@@ -99,17 +99,15 @@ export interface Order {
     };
     items: OrderItem[];
     totalAmount: number;
-    status: OrderStatus | string;
+    status: OrderStatus;
     paymentStatus: PaymentStatus;
-    paymentMethod?: string;
+    paymentMethod?: "card" | "cod";
     paidAt?: string;
     shippingAddress: {
         street: string;
         city: string;
         country: string;
         postalCode?: string;
-        zipCode?: string;
-        state?: string;
     };
     createdAt: string;
     updatedAt: string;

@@ -130,7 +130,9 @@ const CheckoutPageClient = () => {
               0
             ),
             status: "pending",
-            shippingAddress: {
+            paymentStatus: "pending",
+            paymentMethod: paymentMethod,
+            shippingAddress: selectedAddress || {
               street: "",
               city: "",
               country: "",
@@ -159,6 +161,8 @@ const CheckoutPageClient = () => {
     authUser,
     authLoading,
     cartItemsWithQuantities,
+    selectedAddress,
+    paymentMethod,
   ]);
 
   const handleAddressesUpdate = (updatedAddresses: Address[]) => {
@@ -420,8 +424,8 @@ const CheckoutPageClient = () => {
                 type="button"
                 onClick={() => setPaymentMethod("card")}
                 className={`rounded-lg p-4 text-left border transition ${paymentMethod === "card"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 bg-white"
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-200 bg-white"
                   }`}
               >
                 <div className="flex items-center gap-2">
@@ -437,8 +441,8 @@ const CheckoutPageClient = () => {
                 type="button"
                 onClick={() => setPaymentMethod("cod")}
                 className={`rounded-lg p-4 text-left border transition ${paymentMethod === "cod"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 bg-white"
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-200 bg-white"
                   }`}
               >
                 <div className="flex items-center gap-2">

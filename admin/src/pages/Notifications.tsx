@@ -172,7 +172,7 @@ const NotificationsManagement = () => {
   // ── Fetch stats ───────────────────────────────────────────────────────────
   const fetchStats = useCallback(async () => {
     try {
-      const res = await axiosPrivate.get("/notifications/stats");
+      const res = await axiosPrivate.get("/notification-admin/stats");
       setStats(res.data.stats);
     } catch {
       toast.error("Failed to fetch stats");
@@ -183,7 +183,7 @@ const NotificationsManagement = () => {
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
     try {
-      const res = await axiosPrivate.get("/notifications/history");
+      const res = await axiosPrivate.get("/notification-admin/history");
       setHistory(res.data.notifications);
     } catch {
       toast.error("Failed to fetch notification history");
@@ -196,7 +196,7 @@ const NotificationsManagement = () => {
   const fetchUsers = useCallback(async (page = 1, search = "") => {
     setUsersLoading(true);
     try {
-      const res = await axiosPrivate.get("/notifications/users", {
+      const res = await axiosPrivate.get("/notification-admin/users", {
         params: { page, limit: 10, search },
       });
       setUsers(res.data.users);
@@ -296,7 +296,7 @@ const NotificationsManagement = () => {
       if (data.actionButtonUrl) payload.actionButtonUrl = data.actionButtonUrl;
       if (data.targetAudience === "specific") payload.userIds = data.userIds;
 
-      await axiosPrivate.post("/notifications/send", payload);
+      await axiosPrivate.post("/notification-admin/send", payload);
       toast.success("Notification sent successfully!");
       handleReset();
       fetchStats();

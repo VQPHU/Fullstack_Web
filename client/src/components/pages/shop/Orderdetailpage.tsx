@@ -44,6 +44,7 @@ interface OrderAddress {
 interface Order {
   _id: string;
   status: string;
+  paymentStatus?: "pending" | "paid" | "failed";
   paymentMethod?: string;
   items: OrderItem[];
   total: number;
@@ -299,7 +300,8 @@ const OrderDetailPage = () => {
 
   const isPending =
     order.status === "pending" &&
-    order.paymentMethod !== "cod";
+    order.paymentMethod !== "cod" &&
+    order.paymentStatus !== "paid";
 
   const completedSteps = getCompletedSteps(order.status);
   const activeStep = getActiveStep(order.status);

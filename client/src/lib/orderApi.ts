@@ -65,6 +65,7 @@ export interface Order {
   items: OrderItem[];
   total: number;
   status: "pending" | "paid" | "completed" | "cancelled";
+  paymentStatus: "pending" | "paid" | "failed";
   paymentMethod?: "card" | "cod";
   shippingAddress: ShippingAddress;
   paymentIntentId?: string;
@@ -121,7 +122,9 @@ export const createOrderFromCart = async (
 
     return {
       success: true,
-      order: data.order || data,
+      // Dựa trên phản hồi từ server, 'order' luôn có mặt khi thành công
+      order: data.order as Order,
+      message: data.message, // Bao gồm cả message nếu có
     };
   } catch (error) {
     console.error("Error creating order:", error);
@@ -151,12 +154,8 @@ export const getUserOrders = async (token: string): Promise<Order[]> => {
     if (Array.isArray(data)) {
       return data;
     }
-
-    if (data && (Array.isArray(data.orders) || Array.isArray(data.data?.orders))) {
-      return data.orders || data.data.orders;
-    }
-
-    return [];
+    // Ưu tiên data.orders, sau đó là data.data.orders, nếu không có thì trả về mảng rỗng
+    return data?.orders ?? data?.data?.orders ?? [];
   } catch (error) {
     console.error("Error fetching orders:", error);
     return [];
@@ -174,13 +173,21 @@ export const getOrderById = async (
         Authorization: `Bearer ${token}`,
       },
     });
-    const data = await parseResponseBody<Order>(response);
 
+    // Nếu response status là 404 (Not Found), trả về null mà không log lỗi
+    if (response.status === 404) {
+      return null;
+    }
+
+    // Đối với các lỗi khác (ví dụ: 500 Internal Server Error, 401 Unauthorized), ném lỗi
     if (!response.ok) {
+      const data = await parseResponseBody<ApiBody>(response); // Lấy body để có thông tin lỗi chi tiết
       throw buildApiError(response, "Failed to fetch order", data);
     }
 
-    return data;
+    const data = await parseResponseBody<any>(response);
+    // Trả về data.order nếu có, nếu không thì trả về chính data (trường hợp trả về raw object)
+    return (data?.order || data) as Order;
   } catch (error) {
     console.error("Error fetching order:", error);
     return null;

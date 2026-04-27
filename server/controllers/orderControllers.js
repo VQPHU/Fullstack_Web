@@ -159,6 +159,7 @@ export const createOrderFromCart = asyncHandler(async (req, res) => {
         items: validItems,
         total,
         status: "pending",
+        paymentStatus: "pending",
         paymentMethod,
         shippingAddress,
     });
@@ -194,22 +195,15 @@ export const getAllOrdersAdmin = asyncHandler(async (req, res) => {
     const sortOrder = req.query.sortOrder === "desc" ? -1 : 1;
     const status = req.query.status;
     const paymentStatus = req.query.paymentStatus;
+    const paymentMethod = req.query.paymentMethod;
+    const search = req.query.search;
 
-    // Build filter object
     const filter = {};
-    if (status && status !== "all") {
-        filter.status = status;
-    }
-    if (paymentStatus && paymentStatus !== "all") {
-        // Map payment status to actual status values 
-        if (paymentStatus === "paid") {
-            filter.status = { $in: ["paid", "completed"] };
-        } else if (paymentStatus === "pending") {
-            filter.status = "pending";
-        } else if (paymentStatus === "failed") {
-            filter.status = "cancelled";
-        }
-    }
+    if (status && status !== "all") filter.status = status;
+
+    if (paymentStatus && paymentStatus !== "all") filter.paymentStatus = paymentStatus;
+
+    if (paymentMethod) filter.paymentMethod = paymentMethod;
 
     const skip = (page - 1) * perPage;
 
@@ -223,7 +217,6 @@ export const getAllOrdersAdmin = asyncHandler(async (req, res) => {
     const total = await Order.countDocuments(filter);
     const totalPages = Math.ceil(total / perPage);
 
-    // Transform data to match frontend expectations
     const transformedOrders = orders.map((order) => ({
         _id: order._id,
         orderId: `ORD-${order._id.toString().slice(-6).toUpperCase()}`,
@@ -244,30 +237,20 @@ export const getAllOrdersAdmin = asyncHandler(async (req, res) => {
         })),
         totalAmount: order.total,
         status: order.status,
-        paymentStatus:
-            order.status === "paid" || order.status === "completed"
-                ? "paid"
-                : order.status === "cancelled"
-                    ? "failed"
-                    : "pending",
-
-        shippingAddress: order.shippingAddress || {
-            street: "N/A",
-            city: "N/A",
-            state: "N/A",
-            zipCode: "N/A",
-            country: "N/A",
-        },
+        paymentStatus: order.paymentStatus,
+        paymentMethod: order.paymentMethod,
+        shippingAddress: order.shippingAddress,
+        paidAt: order.paidAt,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
     }));
+
     res.json({
         orders: transformedOrders,
         total,
         totalPages,
         currentPage: page,
     });
-
 });
 
 // @desc Delete order 
@@ -312,41 +295,26 @@ export const deleteOrder = asyncHandler(async (req, res) => {
 // @access Private 
 
 export const updateOrderStatus = asyncHandler(async (req, res) => {
-    if (!req.body) {
-        return res.status(400).json({
-            success: false,
-            message: "Request body is missing",
-        });
-    }
+    const { status, paymentStatus, totalAmount, shippingAddress, paymentIntentId, stripeSessionId } = req.body;
 
-    const { status, paymentIntentId, stripeSessionId } = req.body;
-
-    // Validate status 
     const validStatuses = ["pending", "paid", "completed", "cancelled"];
     if (!status || !validStatuses.includes(status)) {
         res.status(400);
-        throw new Error(
-            "Invalid status. Must be one of: pending, paid, completed, cancelled"
-        );
+        throw new Error("Invalid status. Must be one of: pending, paid, completed, cancelled");
     }
 
     const order = await Order.findById(req.params.id);
-
     if (!order) {
         res.status(404);
         throw new Error("Order not found");
     }
 
-    // Check authorization based on order status and user role
-    // - User can update their own orders to "paid" or "cancelled" if status is "pending"
-    // - Admins can update any order at any time
-    // - Webhook calls (no req.user) are always allowed
     if (req.user) {
         const isOwner = order.userId.toString() === req.user._id.toString();
         const isAdmin = req.user.role === "admin";
-
-        // Allow if admin or (owner and updating to paid/cancelled from pending)
-        const isAllowedUserAction = isOwner && (status === "paid" || status === "cancelled") && order.status === "pending";
+        const isAllowedUserAction = isOwner &&
+            (status === "paid" || status === "cancelled") &&
+            order.status === "pending";
 
         if (!isAdmin && !isAllowedUserAction) {
             res.status(403);
@@ -354,24 +322,27 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
         }
     }
 
-    // Prepare update object 
     const updateData = {
         status,
         updatedAt: new Date(),
     };
+    if (paymentStatus) updateData.paymentStatus = paymentStatus;
 
-    // If marking as paid, store payment information and timestamp 
-    if (status === "paid") {
-        if (paymentIntentId) {
-            updateData.paymentIntentId = paymentIntentId;
-        }
-        if (stripeSessionId) {
-            updateData.stripeSessionId = stripeSessionId;
-        }
+    if (totalAmount !== undefined) updateData.total = totalAmount;
+
+    if (shippingAddress) updateData.shippingAddress = shippingAddress;
+
+    if (status === "paid" || status === "completed") {
+        updateData.paymentStatus = "paid";
         updateData.paidAt = new Date();
+        if (paymentIntentId) updateData.paymentIntentId = paymentIntentId;
+        if (stripeSessionId) updateData.stripeSessionId = stripeSessionId;
+    } else if (status === "cancelled") {
+        updateData.paymentStatus = "failed";
     }
+    // pending → paymentStatus giữ nguyên "pending"
 
-    // If status is being changed to cancelled, restore stock
+    // Hoàn kho nếu cancelled
     if (status === "cancelled" && order.status !== "cancelled") {
         for (const item of order.items) {
             await Product.findByIdAndUpdate(item.productId, {
@@ -382,14 +353,10 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
 
     const previousStatus = order.status;
 
-    // Use findByIdAndUpdate to avoid full document validation 
     const updatedOrder = await Order.findByIdAndUpdate(
         req.params.id,
         updateData,
-        {
-            new: true,
-            runValidators: false, // Disable validation to avoid shipping address issues 
-        }
+        { new: true, runValidators: false }
     );
 
     if (updatedOrder && previousStatus !== status) {

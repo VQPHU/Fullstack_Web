@@ -3,6 +3,7 @@ import "./globals.css";
 import Header from "@/components/header/Header";
 import { Toaster } from 'sonner';
 import Footer from "@/components/footer/Footer";
+import NotificationModal from "@/components/home/NotificationModal";
 
 export const metadata: Metadata = {
   title: "Babyshop | Online shopping places",
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body className={`antialiased`}>
         <Header />
         {children}
+        <NotificationModal/>
         <Footer />
         <Toaster
           position="bottom-right"

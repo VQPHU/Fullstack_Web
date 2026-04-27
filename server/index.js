@@ -28,6 +28,7 @@ import socialMediaRoutes from "./routes/socialMediaRoutes.js";
 import websiteIconRoutes from "./routes/websiteIconRoutes.js";
 import componentRoutes from "./routes/componentRoutes.js";
 import pageComponentRoutes from "./routes/Pagecomponentroutes.js";
+import notificationAdminRoutes from "./routes/notificationAdminRoutes.js";
 
 // Load env vars
 dotenv.config();
@@ -107,6 +108,7 @@ app.use("/api/social-media", socialMediaRoutes);
 app.use("/api/website-icons", websiteIconRoutes);
 app.use("/api/components", componentRoutes);
 app.use("/api/page-components", pageComponentRoutes);
+app.use("/api/notification-admin", notificationAdminRoutes);
 
 // API Documentation
 app.use(

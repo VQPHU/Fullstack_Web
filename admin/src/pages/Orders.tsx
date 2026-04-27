@@ -144,7 +144,6 @@ const OrdersManagement = () => {
   const [editTotalAmount, setEditTotalAmount] = useState(0);
   const [editStreet, setEditStreet] = useState("");
   const [editCity, setEditCity] = useState("");
-  const [editState, setEditState] = useState("");
   const [editZip, setEditZip] = useState("");
   const [editCountry, setEditCountry] = useState("");
   const [editItems, setEditItems] = useState<EditableItem[]>([]);
@@ -199,16 +198,19 @@ const OrdersManagement = () => {
       const list: Order[] = res?.data?.orders || [];
       setCashOrders(list);
 
-      const confirmed = list.filter(o => o.status === "completed" || o.paymentStatus === "paid");
+      const confirmed = list.filter(o => o.status === "completed" && o.paymentStatus === "paid");
       const pendingList = list.filter(o => o.status === "pending" && o.paymentStatus === "pending");
+      const pendingSubmissionsList = list.filter(o => o.status === "pending" && o.paymentStatus === "paid");
 
       setCashSummary({
         totalReceived: confirmed.reduce((s, o) => s + o.totalAmount, 0),
         confirmedCount: confirmed.length,
+
         pendingToReceive: pendingList.reduce((s, o) => s + o.totalAmount, 0),
         pendingOrders: pendingList.length,
-        pendingSubmissions: 0,
-        pendingSubmissionsCount: 0,
+        pendingSubmissions: pendingSubmissionsList.reduce((s, o) => s + o.totalAmount, 0),
+        pendingSubmissionsCount: pendingSubmissionsList.length,
+
         confirmed: confirmed.reduce((s, o) => s + o.totalAmount, 0),
         confirmedSubmissions: confirmed.length,
       });
@@ -239,9 +241,15 @@ const OrdersManagement = () => {
   };
 
   useEffect(() => {
-    if (activeTab === "orders") fetchOrders();
+    if (activeTab === "orders") {
+      fetchOrders();
+      fetchCashOrders(); // ✅ thêm để tính summary đúng
+    }
     if (activeTab === "cash") fetchCashOrders();
-    if (activeTab === "pending") fetchPendingOrders();
+    if (activeTab === "pending") {
+      fetchPendingOrders();
+      fetchCashOrders(); // ✅ thêm
+    }
     setSelectedIds(new Set());
   }, [activeTab]);
 
@@ -276,7 +284,6 @@ const OrdersManagement = () => {
     setEditTotalAmount(order.totalAmount);
     setEditStreet(order.shippingAddress?.street || "");
     setEditCity(order.shippingAddress?.city || "");
-    setEditState(order.shippingAddress?.state || "");
     setEditZip(order.shippingAddress?.postalCode || "");
     setEditCountry(order.shippingAddress?.country || "");
     setEditItems(
@@ -328,7 +335,7 @@ const OrdersManagement = () => {
         totalAmount: editTotalAmount,
         shippingAddress: {
           street: editStreet, city: editCity,
-          state: editState, postalCode: editZip, country: editCountry,
+          postalCode: editZip, country: editCountry,
         },
       });
       toast.success("Order updated successfully");
@@ -914,7 +921,7 @@ const OrdersManagement = () => {
                 <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Shipping Address</p>
                 <div className="bg-gray-50 rounded-lg p-3 space-y-0.5">
                   <p>{selectedOrder.shippingAddress?.street}</p>
-                  <p>{selectedOrder.shippingAddress?.city}{selectedOrder.shippingAddress?.state ? `, ${selectedOrder.shippingAddress.state}` : ""}</p>
+                  <p>{selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.postalCode}</p>
                   <p>{selectedOrder.shippingAddress?.country}</p>
                 </div>
               </div>
@@ -1015,10 +1022,6 @@ const OrdersManagement = () => {
                 <div className="space-y-1">
                   <Label className="text-xs">City</Label>
                   <Input value={editCity} onChange={e => setEditCity(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">State</Label>
-                  <Input value={editState} onChange={e => setEditState(e.target.value)} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Zip Code</Label>

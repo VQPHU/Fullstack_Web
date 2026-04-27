@@ -102,6 +102,7 @@ const UserOrdersPageClient = () => {
     const [payingId, setPayingId] = useState<string | null>(null);
     const [cancelDialog, setCancelDialog] = useState<string | null>(null);
     const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
+    const [hiddenOrderIds, setHiddenOrderIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -137,23 +138,10 @@ const UserOrdersPageClient = () => {
     };
 
     // ── Delete ──
-    const handleDelete = async (orderId: string) => {
-        const token = Cookies.get("auth_token") ?? auth_token ?? "";
-        setDeletingId(orderId);
+    const handleDelete = (orderId: string) => {
+        setHiddenOrderIds((prev) => new Set(prev).add(orderId));
         setDeleteDialog(null);
-        try {
-            const res = await deleteOrder(orderId, token);
-            if (res.success) {
-                toast.success("Order deleted");
-                loadOrders(token);
-            } else {
-                toast.error(res.message || "Delete failed");
-            }
-        } catch {
-            toast.error("Delete failed");
-        } finally {
-            setDeletingId(null);
-        }
+        toast.success("Order removed from your view");
     };
 
     // ── Pay Now → Stripe Checkout ──
@@ -205,7 +193,8 @@ const UserOrdersPageClient = () => {
     const safeOrders = Array.isArray(orders) ? orders : [];
     const filteredOrders = safeOrders.filter((o) =>
         filter === "all" ? true : o.status === filter
-    );
+    ).filter((o) => !hiddenOrderIds.has(o._id));
+
     const FILTERS: FilterType[] = ["all", "pending", "paid", "completed", "cancelled"];
 
     return (
@@ -241,8 +230,8 @@ const UserOrdersPageClient = () => {
                                 key={f}
                                 onClick={() => setFilter(f)}
                                 className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${filter === f
-                                        ? "bg-gray-900 text-white border-gray-900"
-                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                    ? "bg-gray-900 text-white border-gray-900"
+                                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                                     }`}
                             >
                                 {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}

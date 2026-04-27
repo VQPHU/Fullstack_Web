@@ -8,13 +8,23 @@ import { toast } from "sonner";
 import {
   clearNotifications,
   deleteNotification,
-  getNotifications as fetchNotifications,
+  getNotifications as fetchOrderNotifications,
+  getAdminNotifications,
   Notification,
+  AdminNotification,
 } from "@/lib/notificationApi";
+import { getOrderById } from "@/lib/orderApi";
 import { useUserStore } from "@/lib/store";
 import SubNavbar from "@/components/header/SubNavbar";
 
-// ─── Confirm Dialog (Đồng bộ với trang Orders) ───────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type UnifiedNotification =
+  | (Notification & { source: "order" })
+  | (AdminNotification & { source: "admin" });
+
+// ─── Confirm Dialog ───────────────────────────────────────────────────────────
+
 interface ConfirmDialogProps {
   title: string;
   description: string;
@@ -55,13 +65,28 @@ const ConfirmDialog = ({
   </div>
 );
 
-// ─── Component Chính ──────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const formatTime = (date: string) => {
+  const diff = Math.floor(
+    (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24)
+  );
+  return diff === 0 ? "Today" : `${diff} days ago`;
+};
+
+// ─── Component Chính ──────────────────────────────────────────────────────────
+
 export default function NotificationsPage() {
   const { auth_token } = useUserStore();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<UnifiedNotification[]>([]);
+  const [validOrderIds, setValidOrderIds] = useState<Set<string>>(new Set());
   const [openClearModal, setOpenClearModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  // Set này dùng để theo dõi những orderId nào đã hiển thị nút "Details"
+  // Nó sẽ được khởi tạo lại mỗi khi component render.
+  const seenOrderIdsForDetailsButton = new Set<string>();
 
   useEffect(() => {
     const loadNotifications = async () => {
@@ -72,8 +97,44 @@ export default function NotificationsPage() {
       }
       setLoading(true);
       try {
-        const data = await fetchNotifications(auth_token);
-        setNotifications(data);
+        const [orderData, adminData] = await Promise.allSettled([
+          fetchOrderNotifications(auth_token),
+          getAdminNotifications(auth_token),
+        ]);
+
+        const orderNotifs: UnifiedNotification[] =
+          orderData.status === "fulfilled"
+            ? orderData.value.map((n) => ({ ...n, source: "order" as const }))
+            : [];
+
+        const adminNotifs: UnifiedNotification[] =
+          adminData.status === "fulfilled"
+            ? adminData.value.map((n) => ({ ...n, source: "admin" as const }))
+            : [];
+
+        const mergedNotifications = [...orderNotifs, ...adminNotifs].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+        setNotifications(mergedNotifications); // Giữ lại tất cả thông báo, không lọc trùng
+
+        // Check từng orderId trong order notifications còn tồn tại không
+        const orderIdsToCheck = [
+          ...new Set( // Vẫn cần các orderId duy nhất để gọi API kiểm tra
+            mergedNotifications // Lấy từ tất cả thông báo đã gộp
+              .filter((n) => n.source === "order" && n.orderId)
+              .map((n) => (n as any).orderId as string)
+          ),
+        ];
+
+        const validIds = await Promise.all(
+          orderIdsToCheck.map(async (id) => {
+            const order = await getOrderById(id, auth_token);
+            return order ? id : null;
+          })
+        );
+
+        setValidOrderIds(new Set(validIds.filter(Boolean) as string[]));
       } catch (err) {
         console.error(err);
         toast.error("Failed to load notifications");
@@ -81,6 +142,7 @@ export default function NotificationsPage() {
         setLoading(false);
       }
     };
+
     loadNotifications();
   }, [auth_token]);
 
@@ -101,21 +163,19 @@ export default function NotificationsPage() {
     const result = await clearNotifications(auth_token);
     setSubmitting(false);
     if (result.success) {
-      setNotifications([]);
+      // Chỉ xóa order notifications, giữ lại admin notifications
+      setNotifications((prev) => prev.filter((n) => n.source === "admin"));
       setOpenClearModal(false);
-      toast.success("All notifications cleared");
+      toast.success("Order notifications cleared");
     }
   };
 
-  const formatTime = (date: string) => {
-    const diff = Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24));
-    return diff === 0 ? "Today" : `${diff} days ago`;
-  };
+  const orderCount = notifications.filter((n) => n.source === "order").length;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-        
+
         {/* SUB-NAVBAR */}
         <SubNavbar />
 
@@ -132,18 +192,18 @@ export default function NotificationsPage() {
             <Button
               variant="outline"
               onClick={() => setOpenClearModal(true)}
-              disabled={notifications.length === 0 || submitting}
+              disabled={orderCount === 0 || submitting}
               className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 rounded-xl flex gap-2 h-10 px-4"
             >
               <Trash2 size={16} /> Clear all
             </Button>
           </div>
 
-          {/* LIST SECTION */}
+          {/* LIST */}
           <div className="space-y-4">
             {loading ? (
               <div className="flex justify-center py-20">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500" />
               </div>
             ) : notifications.length === 0 ? (
               <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-16 text-center">
@@ -158,7 +218,7 @@ export default function NotificationsPage() {
             ) : (
               notifications.map((item) => (
                 <div
-                  key={item._id}
+                  key={`${item.source}-${item._id}`}
                   className="flex flex-col md:flex-row md:items-center justify-between gap-4 border border-gray-100 rounded-2xl p-5 transition-all hover:bg-gray-50/50 hover:border-teal-100 group"
                 >
                   <div className="flex gap-4">
@@ -181,23 +241,47 @@ export default function NotificationsPage() {
                   </div>
 
                   <div className="flex items-center gap-3 self-end md:self-center">
-                    {item.orderId && (
-                      <Link href={`/user/orders/${item.orderId}`}>
+                    {/* Logic để chỉ hiển thị nút "Details" cho thông báo mới nhất của mỗi đơn hàng */}
+                    {item.source === "order" && item.orderId && validOrderIds.has(item.orderId) && (() => {
+                      // Vì mảng `notifications` đã được sắp xếp từ mới nhất đến cũ nhất,
+                      // lần đầu tiên chúng ta gặp một `orderId`, đó chính là thông báo mới nhất.
+                      const isLatestOrderNotification = !seenOrderIdsForDetailsButton.has(item.orderId);
+                      if (isLatestOrderNotification) {
+                        seenOrderIdsForDetailsButton.add(item.orderId); // Đánh dấu orderId này đã hiển thị nút Details
+                        return (
+                          <Link href={`/user/orders/${item.orderId}`}>
+                            <Button variant="outline" className="h-9 text-sm font-semibold border-teal-400 text-teal-600 hover:bg-teal-50 flex gap-2 px-5 rounded-xl">
+                              <Eye size={16} /> Details
+                            </Button>
+                          </Link>
+                        );
+                      }
+                      return null; // Không hiển thị nút Details cho các thông báo cũ hơn của cùng đơn hàng
+                    })()}
+                    {/* Nút Details - admin notification có actionButton */}
+                    {item.source === "admin" && item.actionButtonText && item.actionButtonUrl && (
+                      <a
+                        href={item.actionButtonUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         <Button
                           variant="outline"
                           className="h-9 text-sm font-semibold border-teal-400 text-teal-600 hover:bg-teal-50 flex gap-2 px-5 rounded-xl"
                         >
-                          <Eye size={16} /> Details
+                          <Eye size={16} /> {item.actionButtonText}
                         </Button>
-                      </Link>
+                      </a>
                     )}
-                    <button
-                      onClick={() => handleDelete(item._id)}
-                      className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                      title="Delete"
-                    >
-                      <Trash2 size={20} />
-                    </button>
+                    {item.source === "order" && (
+                      <button
+                        onClick={() => handleDelete(item._id)}
+                        className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                        title="Delete"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
@@ -206,11 +290,11 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* MODAL CLEAR ALL - Sử dụng ConfirmDialog đồng bộ */}
+      {/* MODAL CLEAR ALL */}
       {openClearModal && (
         <ConfirmDialog
           title="Clear All Notifications"
-          description="Are you sure you want to clear all notifications? This action cannot be undone and all notifications will be permanently removed."
+          description="Are you sure you want to clear all order notifications? This action cannot be undone."
           confirmLabel={submitting ? "Clearing..." : "Yes, Clear All"}
           confirmClassName="bg-red-600 hover:bg-red-700"
           onConfirm={handleClearAll}

@@ -3,6 +3,7 @@ import { protect, admin } from "../middleware/authMiddleware.js";
 import {
   getNotificationStats,
   getNotificationHistory,
+  deleteNotification,
   getUsersForNotification,
   sendNotification,
   markAsRead,
@@ -14,8 +15,10 @@ const router = express.Router();
 // GET /api/notification-admin/stats
 router.route("/stats").get(protect, admin, getNotificationStats);
 
-// GET /api/notification-admin/history
+// GET  /api/notification-admin/history
+// DELETE /api/notification-admin/history/:notificationId
 router.route("/history").get(protect, admin, getNotificationHistory);
+router.route("/history/:notificationId").delete(protect, admin, deleteNotification);
 
 // GET /api/notification-admin/users?page=1&limit=10&search=
 router.route("/users").get(protect, admin, getUsersForNotification);

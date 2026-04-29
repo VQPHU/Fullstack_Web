@@ -16,8 +16,19 @@ import {
   X,
   Loader2,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -122,6 +133,9 @@ const NotificationsManagement = () => {
   // ── History ───────────────────────────────────────────────────────────────
   const [history, setHistory] = useState<Notification[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // ── Users (specific target) ───────────────────────────────────────────────
   const [users, setUsers] = useState<NotificationUser[]>([]);
@@ -162,7 +176,6 @@ const NotificationsManagement = () => {
   const watchImageMode = watch("imageMode");
   const watchImageUrl = watch("imageUrl");
 
-  // Đồng bộ preview khi nhập URL
   useEffect(() => {
     if (watchImageMode === "url") {
       setImagePreview(watchImageUrl || null);
@@ -191,6 +204,28 @@ const NotificationsManagement = () => {
       setHistoryLoading(false);
     }
   }, [axiosPrivate]);
+
+  // ── Delete notification ───────────────────────────────────────────────────
+  const handleDeleteClick = (notification: Notification) => {
+    setSelectedNotification(notification);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedNotification) return;
+    setDeleteLoading(true);
+    try {
+      await axiosPrivate.delete(`/notification-admin/history/${selectedNotification._id}`);
+      setHistory((prev) => prev.filter((n) => n._id !== selectedNotification._id));
+      fetchStats();
+      toast.success("Notification deleted successfully");
+      setIsDeleteModalOpen(false);
+    } catch {
+      toast.error("Failed to delete notification");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   // ── Fetch users ───────────────────────────────────────────────────────────
   const fetchUsers = useCallback(async (page = 1, search = "") => {
@@ -222,7 +257,7 @@ const NotificationsManagement = () => {
       if (watchTargetAudience === "specific") {
         fetchUsers(usersPage, usersSearch);
       }
-    }, 500); // Debounce 500ms
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [watchTargetAudience, usersPage, usersSearch]);
@@ -642,7 +677,10 @@ const NotificationsManagement = () => {
                           key={user._id}
                           className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer"
                           onClick={(e) => {
-                            if ((e.target as HTMLElement).tagName !== "BUTTON" && (e.target as HTMLElement).tagName !== "INPUT") {
+                            if (
+                              (e.target as HTMLElement).tagName !== "BUTTON" &&
+                              (e.target as HTMLElement).tagName !== "INPUT"
+                            ) {
                               toggleUser(user._id);
                             }
                           }}
@@ -752,14 +790,33 @@ const NotificationsManagement = () => {
             <div className="space-y-4">
               {history.map((n) => (
                 <div key={n._id} className="border rounded-xl p-5 space-y-3">
-                  {/* Badges */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeBadgeClass(n.type)}`}>
-                      {n.type.replace("_", " ")}
-                    </span>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityBadgeClass(n.priority)}`}>
-                      {n.priority}
-                    </span>
+                  {/* Badges + Delete button */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeBadgeClass(n.type)}`}>
+                        {n.type.replace("_", " ")}
+                      </span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityBadgeClass(n.priority)}`}>
+                        {n.priority}
+                      </span>
+                    </div>
+
+                    {/* Delete button — hidden for read-only */}
+                    {!isReadOnly && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                        disabled={deleteLoading && selectedNotification?._id === n._id}
+                        onClick={() => handleDeleteClick(n)}
+                      >
+                        {deleteLoading && selectedNotification?._id === n._id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </Button>
+                    )}
                   </div>
 
                   {/* Title + Message */}
@@ -775,7 +832,8 @@ const NotificationsManagement = () => {
                       alt={n.title}
                       className="max-h-48 rounded-lg object-cover border"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = "https://res.cloudinary.com/dqfofmvva/image/upload/v1772354177/6596121_gwhzwk.png";
+                        (e.target as HTMLImageElement).src =
+                          "https://res.cloudinary.com/dqfofmvva/image/upload/v1772354177/6596121_gwhzwk.png";
                       }}
                     />
                   )}
@@ -812,6 +870,35 @@ const NotificationsManagement = () => {
           )}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <AlertDialogContent className="rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the notification{" "}
+              <span className="font-semibold text-foreground">"{selectedNotification?.title}"</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading} className="rounded-lg">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleteLoading}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-lg"
+            >
+              {deleteLoading ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -75,6 +75,37 @@ const getNotificationHistory = asyncHandler(async (req, res) => {
 });
 
 // =====================
+// DELETE /api/notification-admin/history/:notificationId
+// Private/Admin — xóa một notification khỏi history
+// =====================
+const deleteNotification = asyncHandler(async (req, res) => {
+    const { notificationId } = req.params;
+
+    const notification = await NotificationAdmin.findById(notificationId);
+    if (!notification) {
+        res.status(404);
+        throw new Error("Notification not found");
+    }
+
+    // Nếu có ảnh upload lên Cloudinary thì xóa luôn
+    if (notification.image && notification.image.includes("cloudinary")) {
+        // Lấy public_id từ URL: .../babymartyt/notifications/<public_id>.<ext>
+        const parts = notification.image.split("/");
+        const fileWithExt = parts[parts.length - 1];
+        const publicId = `babymartyt/notifications/${fileWithExt.split(".")[0]}`;
+        await cloudinary.uploader.destroy(publicId);
+    }
+
+    await notification.deleteOne();
+
+    res.status(200).json({
+        success: true,
+        message: "Notification deleted successfully",
+        deletedId: notificationId,
+    });
+});
+
+// =====================
 // GET /api/notifications/users
 // Private/Admin — danh sách users để chọn khi Specific Users
 // =====================
@@ -253,6 +284,7 @@ const getMyNotifications = asyncHandler(async (req, res) => {
 export {
     getNotificationStats,
     getNotificationHistory,
+    deleteNotification,
     getUsersForNotification,
     sendNotification,
     markAsRead,

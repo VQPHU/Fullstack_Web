@@ -192,31 +192,53 @@ const OrdersManagement = () => {
   const fetchCashOrders = async () => {
     setCashLoading(true);
     try {
+      // Fetch TẤT CẢ orders, không filter paymentMethod
       const res = await axiosPrivate.get("/orders/admin", {
-        params: { paymentMethod: "cod", perPage: 200 },
+        params: { perPage: 200 }, // ← bỏ paymentMethod: "cod"
       });
       const list: Order[] = res?.data?.orders || [];
-      setCashOrders(list);
+        setCashOrders(list);
 
-      const confirmed = list.filter(o => o.status === "completed" && o.paymentStatus === "paid");
-      const pendingList = list.filter(o => o.status === "pending" && o.paymentStatus === "pending");
-      const pendingSubmissionsList = list.filter(o => o.status === "pending" && o.paymentStatus === "paid");
+      // Chỉ COD mới cần "pending to receive" và "pending submissions"
+      const codList = list.filter(o => o.paymentMethod === "cod");
+
+      const pendingList = codList.filter(
+        o => o.paymentStatus === "pending" && o.status !== "cancelled"
+      );
+      const pendingSubmissionsList = codList.filter(
+        o => o.paymentStatus === "paid" && o.status !== "completed" && o.status !== "cancelled"
+      );
+
+      // Confirmed = chỉ COD completed
+      const confirmed = list.filter(
+        o => o.paymentMethod === "cod" && o.status === "completed" && o.paymentStatus === "paid"
+      );
+
+      // Total Received = tất cả completed (COD + Stripe + MetaMask)
+      const totalReceived = list.filter(
+        o => o.status === "completed" && o.paymentStatus === "paid"
+      );
 
       setCashSummary({
-        totalReceived: confirmed.reduce((s, o) => s + o.totalAmount, 0),
-        confirmedCount: confirmed.length,
+        // Total Received = tất cả
+        totalReceived: totalReceived.reduce((s, o) => s + o.totalAmount, 0),
+        confirmedCount: totalReceived.length,
 
+        // Pending to Receive (COD chưa trả tiền)
         pendingToReceive: pendingList.reduce((s, o) => s + o.totalAmount, 0),
         pendingOrders: pendingList.length,
+
+        // Pending Submissions (COD đã trả chưa completed)
         pendingSubmissions: pendingSubmissionsList.reduce((s, o) => s + o.totalAmount, 0),
         pendingSubmissionsCount: pendingSubmissionsList.length,
 
+        // Confirmed = chỉ COD completed
         confirmed: confirmed.reduce((s, o) => s + o.totalAmount, 0),
         confirmedSubmissions: confirmed.length,
       });
       return true;
     } catch {
-      toast.error("Failed to fetch cash orders");
+      toast.error("Failed to fetch orders");
       return false;
     } finally {
       setCashLoading(false);
@@ -417,7 +439,7 @@ const OrdersManagement = () => {
   const handleConfirmCash = async (order: Order) => {
     try {
       await axiosPrivate.put(`/orders/${order._id}/webhook-status`, {
-        status: "completed",
+        status: "pending",
         paymentStatus: "paid",
       });
       toast.success("Cash confirmed successfully");

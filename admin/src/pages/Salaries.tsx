@@ -244,6 +244,25 @@ const SalariesPage = () => {
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             {refreshing ? "Refreshing..." : "Refresh"}
           </Button>
+          <Button
+            onClick={() => {
+              formAdd.reset({
+                employee: "",
+                period: "",
+                baseSalary: 0,
+                bonus: 0,
+                allowance: 0,
+                tax: 0,
+                netSalary: 0,
+                status: "unpaid",
+              });
+              setIsAddModalOpen(true);
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Salary
+          </Button>
         </div>
       </div>
 
@@ -313,7 +332,7 @@ const SalariesPage = () => {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      
+
                       {isAdmin && (
                         <>
                           {!(item as any).isPlaceholder ? (

@@ -107,11 +107,11 @@ export const employeeSchema = z.object({
 export const salarySchema = z.object({
     employee: z.string().min(1, "Employee is required"),
     period: z.string().min(1, "Period is required"),
-    baseSalary: z.number().min(0),
-    bonus: z.number().min(0),
-    allowance: z.number().min(0),
-    tax: z.number().min(0),
-    netSalary: z.number().min(0),
+    baseSalary: z.coerce.number().min(0),
+    bonus: z.coerce.number().min(0),
+    allowance: z.coerce.number().min(0),
+    tax: z.coerce.number().min(0),
+    netSalary: z.coerce.number().min(0),
     status: z.enum(["paid", "unpaid"]),
 });
 

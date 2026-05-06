@@ -1,13 +1,29 @@
 import Salary from "../models/Salarymodel.js";
 import Employee from "../models/EmployeesModel.js";
 
+// ✅ Chuẩn hóa period về định dạng YYYY-MM
+const normalizePeriod = (period) => {
+  if (!period) return null;
+  const [year, month] = period.split("-");
+  return `${year}-${String(month).padStart(2, "0")}`;
+};
+
+// ✅ Lấy period hiện tại theo realtime (YYYY-MM)
+const getCurrentPeriod = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+};
+
 // @desc    Lấy tất cả bảng lương (có thể filter theo period)
 // @route   GET /api/salaries?period=2024-01
 // @access  Admin
 export const getSalaries = async (req, res) => {
   try {
     const { period } = req.query;
-    const filter = period ? { period } : {};
+    const normalizedPeriod = period ? normalizePeriod(period) : null;
+    const filter = normalizedPeriod ? { period: normalizedPeriod } : {};
 
     const salaries = await Salary.find(filter)
       .populate("employee", "employeeId fullName role gender")
@@ -44,7 +60,12 @@ export const getSalaryById = async (req, res) => {
 // @access  Admin
 export const createSalary = async (req, res) => {
   try {
-    const { employee, period, baseSalary, bonus, allowance, tax, status } = req.body;
+    const { employee, baseSalary, bonus, allowance, tax, status } = req.body;
+
+    // ✅ Nếu không truyền period → tự động lấy tháng hiện tại (realtime)
+    const normalizedPeriod = req.body.period
+      ? normalizePeriod(req.body.period)
+      : getCurrentPeriod();
 
     // Kiểm tra nhân viên tồn tại
     const employeeExists = await Employee.findById(employee);
@@ -52,17 +73,17 @@ export const createSalary = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy nhân viên" });
     }
 
-    // Kiểm tra đã có bảng lương kỳ này chưa
-    const existing = await Salary.findOne({ employee, period });
+    // Kiểm tra đã có bảng lương kỳ này chưa (chỉ block cùng nhân viên + cùng kỳ)
+    const existing = await Salary.findOne({ employee, period: normalizedPeriod });
     if (existing) {
       return res.status(400).json({
-        message: `Nhân viên này đã có bảng lương kỳ ${period}`,
+        message: `Nhân viên này đã có bảng lương kỳ ${normalizedPeriod}`,
       });
     }
 
     const salary = new Salary({
       employee,
-      period,
+      period: normalizedPeriod,
       baseSalary,
       bonus,
       allowance,
@@ -90,14 +111,19 @@ export const updateSalary = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy bảng lương" });
     }
 
-    const { baseSalary, bonus, allowance, tax, status, period } = req.body;
+    const { baseSalary, bonus, allowance, tax, status } = req.body;
+
+    // ✅ Nếu có truyền period thì normalize, không thì giữ nguyên
+    const normalizedPeriod = req.body.period
+      ? normalizePeriod(req.body.period)
+      : salary.period;
 
     if (baseSalary !== undefined) salary.baseSalary = baseSalary;
     if (bonus !== undefined) salary.bonus = bonus;
     if (allowance !== undefined) salary.allowance = allowance;
     if (tax !== undefined) salary.tax = tax;
     if (status !== undefined) salary.status = status;
-    if (period !== undefined) salary.period = period;
+    salary.period = normalizedPeriod;
 
     const updated = await salary.save(); // pre-save hook tự tính lại netSalary
     await updated.populate("employee", "employeeId fullName role gender");
@@ -131,10 +157,14 @@ export const deleteSalary = async (req, res) => {
 // @access  Admin
 export const bulkSaveSalaries = async (req, res) => {
   try {
-    const { period, rows } = req.body;
-    // rows: [{ employee, baseSalary, bonus, allowance, tax, status }]
+    const { rows } = req.body;
 
-    if (!period || !Array.isArray(rows) || rows.length === 0) {
+    // ✅ Nếu không truyền period → tự động lấy tháng hiện tại (realtime)
+    const normalizedPeriod = req.body.period
+      ? normalizePeriod(req.body.period)
+      : getCurrentPeriod();
+
+    if (!Array.isArray(rows) || rows.length === 0) {
       return res.status(400).json({ message: "Dữ liệu không hợp lệ" });
     }
 
@@ -143,26 +173,45 @@ export const bulkSaveSalaries = async (req, res) => {
     for (const row of rows) {
       const { employee, baseSalary, bonus, allowance, tax, status } = row;
 
-      const existing = await Salary.findOne({ employee, period });
+      // ✅ Cho phép mỗi row tự override period riêng nếu muốn
+      const rowPeriod = row.period
+        ? normalizePeriod(row.period)
+        : normalizedPeriod;
+
+      const existing = await Salary.findOne({ employee, period: rowPeriod });
 
       if (existing) {
-        // Update nếu đã tồn tại
+        // Update nếu đã tồn tại cùng kỳ
         existing.baseSalary = baseSalary ?? existing.baseSalary;
         existing.bonus = bonus ?? existing.bonus;
         existing.allowance = allowance ?? existing.allowance;
         existing.tax = tax ?? existing.tax;
         existing.status = status ?? existing.status;
+        existing.period = rowPeriod;
         const updated = await existing.save();
         results.push(updated);
       } else {
-        // Tạo mới
-        const salary = new Salary({ employee, period, baseSalary, bonus, allowance, tax, status });
+        // Tạo mới nếu chưa có kỳ này
+        const salary = new Salary({
+          employee,
+          period: rowPeriod,
+          baseSalary,
+          bonus,
+          allowance,
+          tax,
+          status,
+        });
         const created = await salary.save();
         results.push(created);
       }
     }
 
-    res.status(200).json({ message: "Lưu thành công", count: results.length, data: results });
+    res.status(200).json({
+      message: "Lưu thành công",
+      period: normalizedPeriod,
+      count: results.length,
+      data: results,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

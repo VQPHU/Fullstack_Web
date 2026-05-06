@@ -21,31 +21,41 @@ import {
 } from "@/lib/notificationApi";
 import { useUserStore } from "@/lib/store";
 
-// ─── Type Config ──────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const SESSION_KEY = "shown_notification_ids";
 
 const TYPE_CONFIG: Record<
   string,
-  { icon: React.ElementType; color: string; bg: string; label: string }
+  { icon: React.ElementType; color: string; label: string }
 > = {
-  announcement: { icon: Megaphone, color: "#6366f1", bg: "bg-indigo-50", label: "Thông báo" },
-  alert: { icon: AlertTriangle, color: "#ef4444", bg: "bg-red-50", label: "Cảnh báo" },
-  "admin message": { icon: MessageSquare, color: "#0ea5e9", bg: "bg-sky-50", label: "Tin nhắn" },
-  promotion: { icon: Percent, color: "#f59e0b", bg: "bg-amber-50", label: "Khuyến mãi" },
-  deal: { icon: Tag, color: "#10b981", bg: "bg-emerald-50", label: "Deal hời" },
-  offer: { icon: Zap, color: "#8b5cf6", bg: "bg-violet-50", label: "Ưu đãi" },
-  general: { icon: Bell, color: "#64748b", bg: "bg-slate-50", label: "Thông báo" },
+  announcement: { icon: Megaphone, color: "#6366f1", label: "Announcement" },
+  alert: { icon: AlertTriangle, color: "#ef4444", label: "Alert" },
+  "admin message": { icon: MessageSquare, color: "#0ea5e9", label: "Message" },
+  promotion: { icon: Percent, color: "#f59e0b", label: "Promotion" },
+  deal: { icon: Tag, color: "#10b981", label: "Deal" },
+  offer: { icon: Zap, color: "#8b5cf6", label: "Offer" },
+  general: { icon: Bell, color: "#64748b", label: "Notification" },
 };
 
-const formatDate = (iso: string) => {
-  const d = new Date(iso);
-  return d.toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+// ─── Session helpers ──────────────────────────────────────────────────────────
+
+function getShownIds(): Set<string> {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function markShown(id: string) {
+  try {
+    const ids = getShownIds();
+    ids.add(id);
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify([...ids]));
+  } catch { }
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -58,33 +68,42 @@ const NotificationModal = () => {
 
   useEffect(() => {
     if (!hasHydrated || !auth_token) return;
-
     const load = async () => {
       try {
         const all = await getAdminNotifications(auth_token);
-
-        const toShow = Array.isArray(all) ? all.filter((n) =>
-          MODAL_TYPES.map((t) => t.toLowerCase()).includes(n.type.toLowerCase())
-        ) : [];
-
+        const shownIds = getShownIds();
+        const toShow = Array.isArray(all)
+          ? all.filter(
+            (n) =>
+              MODAL_TYPES.map((t) => t.toLowerCase()).includes(n.type.toLowerCase()) &&
+              !shownIds.has(n._id)
+          )
+          : [];
         if (toShow.length > 0) {
           setNotifications(toShow);
           setCurrentIndex(0);
           setVisible(true);
         }
-      } catch (error) {
-        console.error("Lỗi khi lấy thông báo:", error);
+      } catch (err) {
+        console.error("Failed to load notifications:", err);
       }
     };
-
     load();
   }, [hasHydrated, auth_token]);
 
   const current = notifications[currentIndex];
 
-  const handleClose = useCallback(async () => {
+  const dismissCurrent = useCallback(() => {
     if (!current) return;
+    markShown(current._id);
+    if (auth_token && authUser?._id) {
+      markAdminNotificationRead(current._id, authUser._id, auth_token).catch(() => { });
+    }
+  }, [current, auth_token, authUser]);
 
+  const handleClose = useCallback(() => {
+    if (!current) return;
+    dismissCurrent();
     const isLast = currentIndex >= notifications.length - 1;
     if (isLast) {
       setVisible(false);
@@ -92,161 +111,156 @@ const NotificationModal = () => {
       setCurrentIndex((prev) => prev + 1);
       setImageError(false);
     }
-
-    // Gọi API ở background, không dùng await để tránh chặn UI
-    if (auth_token && authUser?._id) {
-      markAdminNotificationRead(current._id, authUser._id, auth_token).catch(() => { });
-    }
-  }, [current, currentIndex, notifications.length, auth_token, authUser]);
+  }, [current, currentIndex, notifications.length, dismissCurrent]);
+  useEffect(() => {
+  const clear = () => sessionStorage.removeItem(SESSION_KEY);
+  window.addEventListener("beforeunload", clear);
+  return () => window.removeEventListener("beforeunload", clear);
+}, []);
 
   const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
-      setImageError(false);
-    }
+    if (currentIndex > 0) { setCurrentIndex((p) => p - 1); setImageError(false); }
   };
-
   const handleNext = () => {
-    if (currentIndex < notifications.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-      setImageError(false);
-    }
+    if (currentIndex < notifications.length - 1) { setCurrentIndex((p) => p + 1); setImageError(false); }
   };
 
   if (!visible || !current) return null;
 
   const config = TYPE_CONFIG[current.type.toLowerCase()] ?? TYPE_CONFIG["general"];
   const Icon = config.icon;
-  const isLast = currentIndex >= notifications.length - 1;
   const total = notifications.length;
+  const imgSrc = (current as any).imageUrl ?? current.image;
+  const hasImage = !!imgSrc && !imageError;
+  const actionUrl = (current as any).actionUrl ?? current.actionButtonUrl;
+  const actionText = current.actionButtonText;
+  const hasAction = !!(actionText && actionUrl);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={handleClose}
       />
 
       {/* Card */}
-      <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div
+        className="relative z-10 w-full max-w-sm overflow-hidden rounded-3xl shadow-2xl"
+        style={{ background: "#111" }}
+      >
+        {/* Image fills entire card */}
+        {hasImage ? (
+          <img
+            src={imgSrc}
+            alt={current.title}
+            className="w-full object-cover"
+            style={{ height: 480, display: "block" }}
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div
+            className="w-full"
+            style={{
+              height: 480,
+              background: `linear-gradient(135deg, ${config.color}33 0%, #111 100%)`,
+            }}
+          />
+        )}
 
-        {/* Accent bar */}
-        <div className="h-1 w-full" style={{ background: config.color }} />
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5">
+        {/* Top row: type badge + close */}
+        <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
           <span
-            className={`flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full ${config.bg}`}
-            style={{ color: config.color }}
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full"
+            style={{
+              background: "rgba(0,0,0,0.6)",
+              color: config.color,
+              backdropFilter: "blur(8px)",
+              border: `1px solid ${config.color}55`,
+            }}
           >
-            <Icon size={13} strokeWidth={2.5} />
+            <Icon size={11} strokeWidth={2.5} />
             {config.label}
           </span>
 
           <button
             onClick={handleClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+            className="w-9 h-9 flex items-center justify-center rounded-full text-white cursor-pointer transition-opacity hover:opacity-80"
+            style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
           >
             <X size={16} strokeWidth={2.5} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-5 pt-4 pb-0">
-          <h2 className="text-lg font-bold text-gray-900 leading-snug mb-2">
+        {/* Bottom gradient overlay: title + message + action */}
+        <div
+          className="absolute bottom-0 left-0 right-0 flex flex-col gap-3 px-5 pt-20 pb-5"
+          style={{
+            background:
+              "linear-gradient(to top, rgba(0,0,0,0.95) 55%, rgba(0,0,0,0.6) 78%, transparent 100%)",
+          }}
+        >
+          <h2 className="text-xl font-extrabold text-white leading-snug">
             {current.title}
           </h2>
-          <p className="text-sm text-gray-500 leading-relaxed mb-4">
-            {current.message}
-          </p>
 
-          {current.image && !imageError && (
-            <div className="w-full rounded-xl overflow-hidden mb-4 bg-gray-50">
-              <img
-                src={current.image}
-                alt={current.title}
-                className="w-full h-52 object-cover"
-                onError={() => setImageError(true)}
-              />
-            </div>
+          {current.message && (
+            <p className="text-sm text-white/65 leading-relaxed">
+              {current.message}
+            </p>
           )}
-        </div>
 
-        {/* Footer */}
-        <div className="px-5 pb-5 flex flex-col gap-3">
-          {/* Action button */}
-          {current.actionButtonText && current.actionButtonUrl && (
+          {hasAction && (
             <a
-              href={current.actionButtonUrl}
+              href={actionUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={handleClose}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white text-sm font-semibold transition-opacity hover:opacity-90"
-              style={{ background: config.color }}
+              className="mt-1 flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold shadow-lg transition-opacity hover:opacity-90"
+              style={{
+                background: `linear-gradient(135deg, ${config.color}, ${config.color}bb)`,
+                color: "#fff",
+              }}
             >
-              {current.actionButtonText}
+              {actionText}
               <ExternalLink size={14} strokeWidth={2.5} />
             </a>
           )}
 
-          {/* Bottom row */}
-          <div className="flex items-center justify-between gap-3">
-            {/* Dots hoặc date */}
-            {total > 1 ? (
+          {/* Pagination — only when multiple notifications */}
+          {total > 1 && (
+            <div className="flex items-center justify-between pt-1">
               <div className="flex items-center gap-1.5">
                 {notifications.map((_, i) => (
                   <div
                     key={i}
                     className="h-1.5 rounded-full transition-all duration-200"
                     style={{
-                      width: i === currentIndex ? 18 : 6,
-                      background: i === currentIndex ? config.color : "#cbd5e1",
+                      width: i === currentIndex ? 20 : 6,
+                      background: i === currentIndex ? config.color : "rgba(255,255,255,0.3)",
                     }}
                   />
                 ))}
               </div>
-            ) : (
-              <span className="text-xs text-gray-400 font-medium">
-                {formatDate(current.createdAt)}
-              </span>
-            )}
-
-            <div className="flex items-center gap-2">
-              {/* Nav arrows */}
-              {total > 1 && (
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={handlePrev}
-                    disabled={currentIndex === 0}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                  >
-                    <ChevronLeft size={15} strokeWidth={2.5} />
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    disabled={currentIndex === total - 1}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                  >
-                    <ChevronRight size={15} strokeWidth={2.5} />
-                  </button>
-                </div>
-              )}
-
-              {/* Dismiss */}
-              <button
-                onClick={handleClose}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer"
-              >
-                {isLast ? "Đã hiểu ✓" : "Tiếp theo →"}
-              </button>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={handlePrev}
+                  disabled={currentIndex === 0}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10 transition-colors"
+                  style={{ border: "1px solid rgba(255,255,255,0.2)" }}
+                >
+                  <ChevronLeft size={15} strokeWidth={2.5} />
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={currentIndex === total - 1}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hover:bg-white/10 transition-colors"
+                  style={{ border: "1px solid rgba(255,255,255,0.2)" }}
+                >
+                  <ChevronRight size={15} strokeWidth={2.5} />
+                </button>
+              </div>
             </div>
-          </div>
-
-          {total > 1 && (
-            <p className="text-center text-xs text-gray-400">
-              {formatDate(current.createdAt)}
-            </p>
           )}
         </div>
       </div>

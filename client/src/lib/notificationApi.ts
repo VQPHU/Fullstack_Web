@@ -112,10 +112,10 @@ export interface AdminNotification {
 
 // Types dùng để check modal
 export const MODAL_TYPES: AdminNotification["type"][] = [
-  "Announcement",
-  "Alert",
-  "Admin Message",
-  "Promotion",
+  // "Announcement",
+  // "Alert",
+  // "Admin Message",
+  // "Promotion",
   "Deal",
 ];
 

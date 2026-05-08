@@ -1,5 +1,5 @@
 import express from 'express'
-import { getUserProfile, loginUser, logoutUser, registerUser } from '../controllers/authControllers.js';
+import { forgotPassword, getUserProfile, googleLogin, loginUser, logoutUser, registerUser, resetPassword } from '../controllers/authControllers.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -63,4 +63,7 @@ router.post("/logout", protect, logoutUser);
 //     res.send("login is working")
 // });
 
+router.post("/google", googleLogin);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 export default router;

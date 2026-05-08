@@ -73,10 +73,10 @@ export const handleStripeWebhook = asyncHandler(async (req, res) => {
             const paymentIntent = event.data.object;
             const orderId = paymentIntent.metadata.orderId;
 
-            // Update order status to paid
+            // Update payment status to paid and keep order status pending
             const order = await Order.findById(orderId);
             if (order) {
-                order.status = "paid";
+                order.paymentStatus = "paid";
                 order.paidAt = new Date();
                 await order.save();
             }

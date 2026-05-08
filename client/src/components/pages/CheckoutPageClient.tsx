@@ -231,13 +231,15 @@ const CheckoutPageClient = () => {
       // 2. Gọi MetaMask thanh toán
       const result = await payWithMetaMask(calculateTotal());
 
-      // 3. Cập nhật trạng thái order → "paid" (giống Stripe webhook)
+      // 3. Cập nhật trạng thái order → giữ pending, chỉ đánh dấu paymentStatus paid
       //    Truyền transactionHash vào paymentIntentId để lưu lại tx
       await updateOrderStatus(
         finalOrder._id,
-        "paid",
+        "pending",
         auth_token!,
-        result.transactionHash
+        result.transactionHash,
+        undefined,
+        "paid"
       );
 
       toast.success(`Thanh toán thành công! TX: ${result.transactionHash.slice(0, 16)}...`);

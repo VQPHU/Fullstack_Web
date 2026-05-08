@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import authApi from '@/lib/authApi';
 
 // Define the schema for the login form
@@ -21,9 +22,7 @@ const loginSchema = z.object({
     email: z.string().email("Invalid email address"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     termsAccepted: z.literal(true, {
-        errorMap: () => ({
-            message: "You must accept the terms and privacy policy",
-        }),
+        message: "You must accept the terms and privacy policy",
     }),
 });
 
@@ -34,6 +33,7 @@ const SigninForm = () => {
     const [showPassword, setShowPassword] = useState<boolean>(false);
     const router = useRouter();
     const { setAuthToken, updateUser } = useUserStore();
+    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
     const form = useForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
@@ -60,7 +60,7 @@ const SigninForm = () => {
                 toast.error("Login failed. Please check your credentials and try again. ",);
                 return false;
             }
-        } catch {
+        } catch (error) {
             console.error("Login failed", error);
             toast.error("Login failed. Please try again later.");
             return false;
@@ -75,6 +75,27 @@ const SigninForm = () => {
             router.push("/user/profile");
         }
         setIsLoading(false);
+    };
+
+    const handleGoogleLogin = async (credential: string) => {
+        setIsLoading(true);
+        try {
+            const response = await authApi.post("/auth/google", { credential });
+            if (response.success && response.data) {
+                const { token, ...userData } = response.data;
+                setAuthToken(token);
+                updateUser(userData);
+                toast.success("Login with Google successfully!");
+                router.push("/user/profile");
+            } else {
+                toast.error(response.error?.message || "Google login failed. Please try again.");
+            }
+        } catch (error) {
+            console.error("Google login failed", error);
+            toast.error("Google login failed. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
     return (
         <motion.div
@@ -234,13 +255,54 @@ const SigninForm = () => {
                 <CardFooter className="justify-center flex flex-col gap-5">
                     <p className="text-sm text-gray-500">
                         Don&apos;t have an account?{" "}
-                        <Link
-                            href="/auth/signup"
-                            className="text-indigo-600 hover:text-indigo-800 hover:underline transition-all duration-200"
-                        >
+                        <Link href="/auth/signup" className="text-indigo-600 hover:text-indigo-800 hover:underline transition-all duration-200">
                             Sign up
                         </Link>
                     </p>
+
+                    {/* Thêm đoạn này */}
+                    <div className="w-full flex items-center gap-3">
+                        <div className="flex-1 h-px bg-gray-200" />
+                        <span className="text-xs text-gray-400">or</span>
+                        <div className="flex-1 h-px bg-gray-200" />
+                    </div>
+
+                    {googleClientId ? (
+                        <GoogleOAuthProvider clientId={googleClientId}>
+                            <GoogleLogin
+                                onSuccess={(res) => {
+                                    if (res.credential) {
+                                        handleGoogleLogin(res.credential);
+                                    } else {
+                                        toast.error("Google did not return a login credential.");
+                                    }
+                                }}
+                                onError={() => toast.error("Google login failed")}
+                                width="100%"
+                                theme="outline"
+                                shape="rectangular"
+                                text="signin_with"
+                            />
+                        </GoogleOAuthProvider>
+                    ) : (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            disabled
+                        >
+                            Google login is not configured
+                        </Button>
+                    )}
+
+                    <Link
+                        href="/auth/forgot-password"
+                        className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-all duration-200"
+                    >
+                        Forgot password?
+                    </Link>
+                    {/* Hết đoạn thêm */}
+
                 </CardFooter>
                 <CardFooter className="flex flex-col items-center space-y-4">
                     <CardDescription className="text-sm text-gray-600 text-center">

@@ -326,7 +326,15 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
         status,
         updatedAt: new Date(),
     };
-    if (paymentStatus) updateData.paymentStatus = paymentStatus;
+    if (paymentStatus) {
+        updateData.paymentStatus = paymentStatus;
+        if (paymentStatus === "paid") {
+            updateData.paidAt = new Date();
+        }
+    }
+
+    if (paymentIntentId) updateData.paymentIntentId = paymentIntentId;
+    if (stripeSessionId) updateData.stripeSessionId = stripeSessionId;
 
     if (totalAmount !== undefined) updateData.total = totalAmount;
 
@@ -335,12 +343,10 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     if (status === "paid" || status === "completed") {
         updateData.paymentStatus = "paid";
         updateData.paidAt = new Date();
-        if (paymentIntentId) updateData.paymentIntentId = paymentIntentId;
-        if (stripeSessionId) updateData.stripeSessionId = stripeSessionId;
     } else if (status === "cancelled") {
         updateData.paymentStatus = "failed";
     }
-    // pending → paymentStatus giữ nguyên "pending"
+    // pending → paymentStatus giữ nguyên nếu có
 
     // Hoàn kho nếu cancelled
     if (status === "cancelled" && order.status !== "cancelled") {

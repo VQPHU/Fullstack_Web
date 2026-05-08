@@ -37,7 +37,8 @@ const SuccessPageClient = () => {
                                 Authorization: `Bearer ${token}`,
                             },
                             body: JSON.stringify({
-                                status: "paid",
+                                status: "pending",
+                                paymentStatus: "paid",
                                 stripeSessionId: sessionId,
                             }),
                         }

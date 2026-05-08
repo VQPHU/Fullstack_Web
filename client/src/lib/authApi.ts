@@ -1,11 +1,18 @@
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const rawBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const apiBaseURL = rawBaseURL.replace(/\/+$/, "").replace(/\/api$/, "");
+
+const buildApiUrl = (url: string): string => {
+  const normalizedPath = url.replace(/^\/+/, "").replace(/^api\/+/, "");
+  return `${apiBaseURL}/api/${normalizedPath}`;
+};
 
 type ApiError = {
   message: string;
   code: string | number;
 };
 
-type ApiResponse<T> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ApiResponse<T = any> = {
   success: boolean;
   data?: T;
   error?: ApiError;
@@ -25,7 +32,7 @@ const authApi = {
   post: async (url: string, body: unknown): Promise<ApiResponse> => {
     try {
       const token = getAuthToken();
-      const response = await fetch(`${baseURL}${url}`, {
+      const response = await fetch(buildApiUrl(url), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -72,7 +79,7 @@ const authApi = {
     try {
       const token = getAuthToken();
       console.log("authApi: PUT", url, "Token:", !!token);
-      const response = await fetch(`${baseURL}${url}`, {
+      const response = await fetch(buildApiUrl(url), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -125,7 +132,7 @@ const authApi = {
     try {
       const token = getAuthToken();
       console.log("authApi: GET", url, "Token:", !!token);
-      const response = await fetch(`${baseURL}${url}`, {
+      const response = await fetch(buildApiUrl(url), {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -177,7 +184,7 @@ const authApi = {
     try {
       const token = getAuthToken();
       console.log("authApi: DELETE", url, "Token:", !!token);
-      const response = await fetch(`${baseURL}${url}`, {
+      const response = await fetch(buildApiUrl(url), {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

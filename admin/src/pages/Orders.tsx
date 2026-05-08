@@ -1,83 +1,73 @@
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription,
+  DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell,
+  TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import useAuthStore from "@/store/useAuthStore";
 import {
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Eye,
-  History,
-  Loader2,
-  Package,
-  Pencil,
-  Plus,
-  RefreshCw,
-  Trash2,
-  AlertCircle,
+  AlertCircle, CheckCircle2, ChevronLeft, ChevronRight,
+  Clock, Eye, History, Loader2, Package, Pencil,
+  Plus, RefreshCw, Trash2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ActiveTab, OrderStatus, PaymentStatus, OrderItem, Order, StatusHistory, CashSummary, EditableItem } from "../lib/type";
+import {
+  ActiveTab, CashSummary, EditableItem,
+  Order, OrderStatus, PaymentStatus, StatusHistory,
+} from "../lib/type";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const ORDER_STATUS_OPTIONS: OrderStatus[] = ["pending", "paid", "completed", "cancelled"];
 const PAYMENT_STATUS_OPTIONS: PaymentStatus[] = ["pending", "paid", "failed"];
 
-const statusBadgeClass = (status: OrderStatus) => {
-  switch (status) {
-    case "pending": return "bg-yellow-100 text-yellow-800 border border-yellow-300";
-    case "paid": return "bg-blue-100 text-blue-800 border border-blue-300";
-    case "completed": return "bg-green-100 text-green-800 border border-green-300";
-    case "cancelled": return "bg-red-100 text-red-800 border border-red-300";
-  }
+const EMPTY_SUMMARY: CashSummary = {
+  totalReceived: 0, confirmedCount: 0,
+  pendingToReceive: 0, pendingOrders: 0,
+  pendingSubmissions: 0, pendingSubmissionsCount: 0,
+  confirmed: 0, confirmedSubmissions: 0,
 };
 
-const paymentBadgeClass = (status: PaymentStatus) => {
-  switch (status) {
-    case "paid": return "bg-green-100 text-green-800 border border-green-300";
-    case "pending": return "bg-yellow-100 text-yellow-800 border border-yellow-300";
-    case "failed": return "bg-red-100 text-red-800 border border-red-300";
-  }
+// ─── Status conditions (single source of truth) ───────────────────────────────
+//
+//  Pending to Receive  → status: pending   | paymentStatus: pending
+//  Pending Submissions → status: pending   | paymentStatus: paid
+//  Cash Received (tab) → status: pending   | paymentStatus: paid
+//  Confirmed           → status: paid      | paymentStatus: paid
+//  Total Received      → status: completed | paymentStatus: paid
+//
+const isPendingToReceive = (o: Order) => o.status === "pending" && o.paymentStatus === "pending";
+const isPendingSubmission = (o: Order) => o.status === "pending" && o.paymentStatus === "paid";
+const isConfirmed = (o: Order) => o.status === "paid" && o.paymentStatus === "paid";
+const isTotalReceived = (o: Order) => o.status === "completed" && o.paymentStatus === "paid";
+
+// Derive tab from new status after edit — auto-switches user to correct tab
+const deriveTab = (status: OrderStatus, paymentStatus: PaymentStatus): ActiveTab => {
+  if (status === "pending" && paymentStatus === "pending") return "pending";
+  if (status === "pending" && paymentStatus === "paid") return "cash";
+  if (status === "paid" && paymentStatus === "paid") return "cash";
+  if (status === "completed") return "cash";
+  return "orders"; // cancelled / other
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -90,54 +80,182 @@ const fmtDateTime = (iso: string) =>
     hour: "numeric", minute: "2-digit", hour12: true,
   });
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const STATUS_BADGE: Record<OrderStatus, string> = {
+  pending: "bg-yellow-100 text-yellow-800 border border-yellow-300",
+  paid: "bg-blue-100 text-blue-800 border border-blue-300",
+  completed: "bg-green-100 text-green-800 border border-green-300",
+  cancelled: "bg-red-100 text-red-800 border border-red-300",
+};
+
+const PAYMENT_BADGE: Record<PaymentStatus, string> = {
+  paid: "bg-green-100 text-green-800 border border-green-300",
+  pending: "bg-yellow-100 text-yellow-800 border border-yellow-300",
+  failed: "bg-red-100 text-red-800 border border-red-300",
+};
+
+const sum = (list: Order[]) => list.reduce((acc, o) => acc + (o.totalAmount ?? 0), 0);
+
+const buildSummary = (list: Order[]): CashSummary => {
+  const pendingToReceive = list.filter(isPendingToReceive);
+  const pendingSubmission = list.filter(isPendingSubmission);
+  const confirmed = list.filter(isConfirmed);
+  const totalReceived = list.filter(isTotalReceived);
+
+  return {
+    totalReceived: sum(totalReceived),
+    confirmedCount: totalReceived.length,
+    pendingToReceive: sum(pendingToReceive),
+    pendingOrders: pendingToReceive.length,
+    pendingSubmissions: sum(pendingSubmission),
+    pendingSubmissionsCount: pendingSubmission.length,
+    confirmed: sum(confirmed),
+    confirmedSubmissions: confirmed.length,
+  };
+};
+
+// ─── Shared UI Pieces ─────────────────────────────────────────────────────────
+
+const StatusBadge = ({ status }: { status: OrderStatus }) => (
+  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[status]}`}>
+    {capitalize(status)}
+  </span>
+);
+
+const PaymentBadge = ({ status }: { status: PaymentStatus }) => (
+  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${PAYMENT_BADGE[status]}`}>
+    {capitalize(status)}
+  </span>
+);
+
+const Spinner = () => (
+  <div className="flex justify-center items-center py-16">
+    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+  </div>
+);
+
+const EmptyState = ({ icon: Icon, message }: { icon: React.ElementType; message: string }) => (
+  <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+    <Icon className="w-10 h-10 mb-3 opacity-30" />
+    <p className="text-sm">{message}</p>
+  </div>
+);
+
+// ─── Summary Cards ────────────────────────────────────────────────────────────
+
+const TopCards = ({ summary, userName, userEmail, userRole }: {
+  summary: CashSummary;
+  userName?: string;
+  userEmail?: string;
+  userRole?: string;
+}) => (
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+    <div className="lg:col-span-2 border rounded-xl p-5 bg-white">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+          <Package className="w-5 h-5 text-blue-600" />
+        </div>
+        <div>
+          <p className="font-semibold text-sm">Account Details</p>
+          <p className="text-xs text-muted-foreground">Accounts Department</p>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {[
+          { label: "Name", value: userName || "—" },
+          { label: "Email", value: userEmail || "—" },
+          { label: "Role", value: userRole ? capitalize(userRole) : "—" },
+        ].map(row => (
+          <div key={row.label} className="flex justify-between items-center border-b pb-2 last:border-0">
+            <span className="text-sm text-muted-foreground">{row.label}:</span>
+            <span className="text-sm font-medium">{row.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="border rounded-xl p-5 bg-green-50 border-green-200">
+      <div className="flex items-center gap-2 mb-2">
+        <CheckCircle2 className="w-5 h-5 text-green-600" />
+        <p className="font-semibold text-green-800">Total Received</p>
+      </div>
+      <p className="text-xs text-green-600 mb-3">All confirmed cash collections</p>
+      <p className="text-3xl font-bold text-green-700">${summary.totalReceived.toFixed(2)}</p>
+      <p className="text-xs text-green-600 mt-1">
+        From {summary.confirmedCount} confirmed submission(s)
+      </p>
+    </div>
+  </div>
+);
+
+const StatCards = ({ summary }: { summary: CashSummary }) => (
+  <div className="grid grid-cols-3 gap-4 mb-4">
+    <div className="border rounded-xl p-4 bg-white">
+      <div className="flex items-center gap-2 mb-1">
+        <Clock className="w-4 h-4 text-orange-500" />
+        <p className="text-sm text-muted-foreground">Pending to Receive</p>
+      </div>
+      <p className="text-xl font-bold text-orange-500">${summary.pendingToReceive.toFixed(2)}</p>
+      <p className="text-xs text-muted-foreground mt-1">{summary.pendingOrders} order(s) with pending payment</p>
+    </div>
+    <div className="border rounded-xl p-4 bg-white">
+      <div className="flex items-center gap-2 mb-1">
+        <AlertCircle className="w-4 h-4 text-purple-500" />
+        <p className="text-sm text-muted-foreground">Pending Submissions</p>
+      </div>
+      <p className="text-xl font-bold text-purple-500">${summary.pendingSubmissions.toFixed(2)}</p>
+      <p className="text-xs text-muted-foreground mt-1">{summary.pendingSubmissionsCount} submission(s) to confirm</p>
+    </div>
+    <div className="border rounded-xl p-4 bg-white">
+      <div className="flex items-center gap-2 mb-1">
+        <CheckCircle2 className="w-4 h-4 text-green-600" />
+        <p className="text-sm text-muted-foreground">Confirmed</p>
+      </div>
+      <p className="text-xl font-bold text-green-600">${summary.confirmed.toFixed(2)}</p>
+      <p className="text-xs text-muted-foreground mt-1">{summary.confirmedSubmissions} confirmed submission(s)</p>
+    </div>
+  </div>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 const OrdersManagement = () => {
   const axiosPrivate = useAxiosPrivate();
   const { checkIsAdmin, user } = useAuthStore();
-  const isAdmin = checkIsAdmin();
-  const isReadOnly = !isAdmin;
+  const isReadOnly = !checkIsAdmin();
 
-  // ── Tab state ──────────────────────────────────────────────────────────────
+  // ── Tab ────────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<ActiveTab>("pending");
 
-  // ── Orders (tab: orders) ───────────────────────────────────────────────────
+  // ── Orders tab state ───────────────────────────────────────────────────────
   const [orders, setOrders] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [filterPayment, setFilterPayment] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterPayment, setFilterPayment] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // ── Cash tab ───────────────────────────────────────────────────────────────
+  // ── Cash / Summary state ───────────────────────────────────────────────────
   const [cashOrders, setCashOrders] = useState<Order[]>([]);
-  const [cashSummary, setCashSummary] = useState<CashSummary>({
-    totalReceived: 0, confirmedCount: 0,
-    pendingToReceive: 0, pendingOrders: 0,
-    pendingSubmissions: 0, pendingSubmissionsCount: 0,
-    confirmed: 0, confirmedSubmissions: 0,
-  });
+  const [cashSummary, setCashSummary] = useState<CashSummary>(EMPTY_SUMMARY);
   const [cashLoading, setCashLoading] = useState(false);
 
-  // ── Pending tab ────────────────────────────────────────────────────────────
+  // ── Pending tab state ──────────────────────────────────────────────────────
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
 
-  // ── Selection (bulk delete) ────────────────────────────────────────────────
+  // ── Selection ──────────────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // ── Modals ─────────────────────────────────────────────────────────────────
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  // View
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // Edit
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editOrderStatus, setEditOrderStatus] = useState<OrderStatus>("pending");
   const [editPaymentStatus, setEditPaymentStatus] = useState<PaymentStatus>("pending");
@@ -149,25 +267,22 @@ const OrdersManagement = () => {
   const [editItems, setEditItems] = useState<EditableItem[]>([]);
   const [editLoading, setEditLoading] = useState(false);
 
-  // Status history
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [statusHistory, setStatusHistory] = useState<StatusHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  // Delete single
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Delete bulk
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
 
-  // ── Fetch orders tab ───────────────────────────────────────────────────────
-  const fetchOrders = async (showRefreshing = false) => {
-    if (showRefreshing) setRefreshing(true);
-    else setLoading(true);
+  // ── Data fetching ──────────────────────────────────────────────────────────
+
+  const fetchOrders = useCallback(async (showRefreshing = false) => {
+    showRefreshing ? setRefreshing(true) : setLoading(true);
     try {
-      const res = await axiosPrivate.get("/orders/admin", {
+      const { data } = await axiosPrivate.get("/orders/admin", {
         params: {
           page, perPage, sortOrder,
           ...(filterStatus !== "all" && { status: filterStatus }),
@@ -175,9 +290,9 @@ const OrdersManagement = () => {
           ...(searchQuery && { search: searchQuery }),
         },
       });
-      setOrders(res?.data?.orders || []);
-      setTotal(res?.data?.total || 0);
-      setTotalPages(res?.data?.totalPages || 1);
+      setOrders(data?.orders ?? []);
+      setTotal(data?.total ?? 0);
+      setTotalPages(data?.totalPages ?? 1);
       return true;
     } catch {
       toast.error("Failed to fetch orders");
@@ -186,56 +301,15 @@ const OrdersManagement = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [axiosPrivate, page, perPage, sortOrder, filterStatus, filterPayment, searchQuery]);
 
-  // ── Fetch cash tab ─────────────────────────────────────────────────────────
-  const fetchCashOrders = async () => {
+  const fetchCashOrders = useCallback(async () => {
     setCashLoading(true);
     try {
-      // Fetch TẤT CẢ orders, không filter paymentMethod
-      const res = await axiosPrivate.get("/orders/admin", {
-        params: { perPage: 200 }, // ← bỏ paymentMethod: "cod"
-      });
-      const list: Order[] = res?.data?.orders || [];
-        setCashOrders(list);
-
-      // Chỉ COD mới cần "pending to receive" và "pending submissions"
-      const codList = list.filter(o => o.paymentMethod === "cod");
-
-      const pendingList = codList.filter(
-        o => o.paymentStatus === "pending" && o.status !== "cancelled"
-      );
-      const pendingSubmissionsList = codList.filter(
-        o => o.paymentStatus === "paid" && o.status !== "completed" && o.status !== "cancelled"
-      );
-
-      // Confirmed = chỉ COD completed
-      const confirmed = list.filter(
-        o => o.paymentMethod === "cod" && o.status === "completed" && o.paymentStatus === "paid"
-      );
-
-      // Total Received = tất cả completed (COD + Stripe + MetaMask)
-      const totalReceived = list.filter(
-        o => o.status === "completed" && o.paymentStatus === "paid"
-      );
-
-      setCashSummary({
-        // Total Received = tất cả
-        totalReceived: totalReceived.reduce((s, o) => s + o.totalAmount, 0),
-        confirmedCount: totalReceived.length,
-
-        // Pending to Receive (COD chưa trả tiền)
-        pendingToReceive: pendingList.reduce((s, o) => s + o.totalAmount, 0),
-        pendingOrders: pendingList.length,
-
-        // Pending Submissions (COD đã trả chưa completed)
-        pendingSubmissions: pendingSubmissionsList.reduce((s, o) => s + o.totalAmount, 0),
-        pendingSubmissionsCount: pendingSubmissionsList.length,
-
-        // Confirmed = chỉ COD completed
-        confirmed: confirmed.reduce((s, o) => s + o.totalAmount, 0),
-        confirmedSubmissions: confirmed.length,
-      });
+      const { data } = await axiosPrivate.get("/orders/admin", { params: { perPage: 200 } });
+      const list: Order[] = data?.orders ?? [];
+      setCashOrders(list);
+      setCashSummary(buildSummary(list));
       return true;
     } catch {
       toast.error("Failed to fetch orders");
@@ -243,16 +317,16 @@ const OrdersManagement = () => {
     } finally {
       setCashLoading(false);
     }
-  };
+  }, [axiosPrivate]);
 
-  // ── Fetch pending tab ──────────────────────────────────────────────────────
-  const fetchPendingOrders = async () => {
+  // Pending tab = status:pending & paymentStatus:pending only
+  const fetchPendingOrders = useCallback(async () => {
     setPendingLoading(true);
     try {
-      const res = await axiosPrivate.get("/orders/admin", {
+      const { data } = await axiosPrivate.get("/orders/admin", {
         params: { status: "pending", paymentStatus: "pending", perPage: 200 },
       });
-      setPendingOrders(res?.data?.orders || []);
+      setPendingOrders(data?.orders ?? []);
       return true;
     } catch {
       toast.error("Failed to fetch pending orders");
@@ -260,61 +334,67 @@ const OrdersManagement = () => {
     } finally {
       setPendingLoading(false);
     }
-  };
+  }, [axiosPrivate]);
+
+  // ── Side effects ───────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (activeTab === "orders") {
-      fetchOrders();
-      fetchCashOrders(); // ✅ thêm để tính summary đúng
-    }
-    if (activeTab === "cash") fetchCashOrders();
-    if (activeTab === "pending") {
-      fetchPendingOrders();
-      fetchCashOrders(); // ✅ thêm
-    }
     setSelectedIds(new Set());
+    if (activeTab === "orders") { fetchOrders(); fetchCashOrders(); }
+    if (activeTab === "cash") fetchCashOrders();
+    if (activeTab === "pending") { fetchPendingOrders(); fetchCashOrders(); }
   }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === "orders") fetchOrders();
   }, [page, sortOrder, filterStatus, filterPayment, perPage]);
 
-  // ── Account + summary shared across tabs ───────────────────────────────────
-  const accountUser = user;
+  const refreshCurrentTab = useCallback(async () => {
+    let ok = false;
+    if (activeTab === "orders") ok = await fetchOrders(true);
+    if (activeTab === "cash") ok = await fetchCashOrders();
+    if (activeTab === "pending") ok = await fetchPendingOrders();
+    if (ok) toast.success("Orders refreshed");
+  }, [activeTab, fetchOrders, fetchCashOrders, fetchPendingOrders]);
 
-  // ── Selection ──────────────────────────────────────────────────────────────
-  const toggleSelect = (id: string) => {
+  // refetchAll: refresh data, then optionally switch tab
+  const refetchAll = useCallback(async (switchToTab?: ActiveTab) => {
+    await fetchCashOrders();
+    if (activeTab === "orders") fetchOrders();
+    if (activeTab === "pending") fetchPendingOrders();
+    if (switchToTab) setActiveTab(switchToTab);
+  }, [activeTab, fetchOrders, fetchCashOrders, fetchPendingOrders]);
+
+  // ── Selection helpers ──────────────────────────────────────────────────────
+
+  const toggleSelect = (id: string) =>
     setSelectedIds(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  };
-  const unselectAll = () => setSelectedIds(new Set());
 
-  // ── View detail ────────────────────────────────────────────────────────────
-  const handleViewDetail = (order: Order) => {
-    setSelectedOrder(order);
-    setIsDetailOpen(true);
-  };
+  const selectAll = (checked: boolean) =>
+    setSelectedIds(checked ? new Set(orders.map(o => o._id)) : new Set());
 
-  // ── Edit ───────────────────────────────────────────────────────────────────
+  // ── Handlers: Edit ─────────────────────────────────────────────────────────
+
   const handleOpenEdit = (order: Order) => {
     setSelectedOrder(order);
     setEditOrderStatus(order.status);
     setEditPaymentStatus(order.paymentStatus);
     setEditTotalAmount(order.totalAmount);
-    setEditStreet(order.shippingAddress?.street || "");
-    setEditCity(order.shippingAddress?.city || "");
-    setEditZip(order.shippingAddress?.postalCode || "");
-    setEditCountry(order.shippingAddress?.country || "");
+    setEditStreet(order.shippingAddress?.street ?? "");
+    setEditCity(order.shippingAddress?.city ?? "");
+    setEditZip(order.shippingAddress?.postalCode ?? "");
+    setEditCountry(order.shippingAddress?.country ?? "");
     setEditItems(
       order.items?.map(i => ({
-        name: i.products?.name || "",
+        name: i.products?.name ?? "",
         unitPrice: i.price,
         quantity: i.quantity,
         totalPrice: i.price * i.quantity,
-      })) || []
+      })) ?? []
     );
     setIsEditOpen(true);
   };
@@ -328,24 +408,20 @@ const OrdersManagement = () => {
       if (field === "quantity") item.quantity = parseInt(value) || 1;
       item.totalPrice = item.unitPrice * item.quantity;
       next[idx] = item;
-      const newTotal = next.reduce((s, i) => s + i.totalPrice, 0);
-      setEditTotalAmount(parseFloat(newTotal.toFixed(2)));
+      setEditTotalAmount(parseFloat(next.reduce((s, i) => s + i.totalPrice, 0).toFixed(2)));
       return next;
     });
   };
 
-  const handleAddItem = () => {
+  const handleAddItem = () =>
     setEditItems(prev => [...prev, { name: "", unitPrice: 0, quantity: 1, totalPrice: 0 }]);
-  };
 
-  const handleRemoveItem = (idx: number) => {
+  const handleRemoveItem = (idx: number) =>
     setEditItems(prev => {
       const next = prev.filter((_, i) => i !== idx);
-      const newTotal = next.reduce((s, i) => s + i.totalPrice, 0);
-      setEditTotalAmount(parseFloat(newTotal.toFixed(2)));
+      setEditTotalAmount(parseFloat(next.reduce((s, i) => s + i.totalPrice, 0).toFixed(2)));
       return next;
     });
-  };
 
   const handleUpdateOrder = async () => {
     if (!selectedOrder) return;
@@ -355,16 +431,13 @@ const OrdersManagement = () => {
         status: editOrderStatus,
         paymentStatus: editPaymentStatus,
         totalAmount: editTotalAmount,
-        shippingAddress: {
-          street: editStreet, city: editCity,
-          postalCode: editZip, country: editCountry,
-        },
+        shippingAddress: { street: editStreet, city: editCity, postalCode: editZip, country: editCountry },
       });
       toast.success("Order updated successfully");
       setIsEditOpen(false);
-      if (activeTab === "orders") fetchOrders();
-      if (activeTab === "cash") fetchCashOrders();
-      if (activeTab === "pending") fetchPendingOrders();
+      // Auto-switch to the tab matching the new status combination
+      const targetTab = deriveTab(editOrderStatus, editPaymentStatus);
+      await refetchAll(targetTab);
     } catch {
       toast.error("Failed to update order");
     } finally {
@@ -372,18 +445,19 @@ const OrdersManagement = () => {
     }
   };
 
-  // ── Status history ─────────────────────────────────────────────────────────
+  // ── Handlers: History ──────────────────────────────────────────────────────
+
   const handleOpenHistory = async (order: Order) => {
     setSelectedOrder(order);
     setIsHistoryOpen(true);
     setHistoryLoading(true);
     try {
-      const res = await axiosPrivate.get(`/orders/${order._id}/history`);
-      setStatusHistory(res?.data?.history || []);
+      const { data } = await axiosPrivate.get(`/orders/${order._id}/history`);
+      setStatusHistory(data?.history ?? []);
     } catch {
       setStatusHistory([{
-        status: order.status as OrderStatus,
-        changedBy: order.user?.name || "Unknown",
+        status: order.status,
+        changedBy: order.user?.name ?? "Unknown",
         notes: "Order created",
         createdAt: order.createdAt,
       }]);
@@ -392,11 +466,7 @@ const OrdersManagement = () => {
     }
   };
 
-  // ── Delete single ──────────────────────────────────────────────────────────
-  const handleOpenDelete = (order: Order) => {
-    setSelectedOrder(order);
-    setIsDeleteOpen(true);
-  };
+  // ── Handlers: Delete ───────────────────────────────────────────────────────
 
   const handleDeleteOrder = async () => {
     if (!selectedOrder) return;
@@ -406,9 +476,7 @@ const OrdersManagement = () => {
       toast.success("Order deleted successfully");
       setIsDeleteOpen(false);
       setPage(1);
-      if (activeTab === "orders") fetchOrders();
-      if (activeTab === "cash") fetchCashOrders();
-      if (activeTab === "pending") fetchPendingOrders();
+      refetchAll();
     } catch {
       toast.error("Failed to delete order");
     } finally {
@@ -416,18 +484,14 @@ const OrdersManagement = () => {
     }
   };
 
-  // ── Bulk delete ────────────────────────────────────────────────────────────
   const handleBulkDelete = async () => {
     setBulkDeleteLoading(true);
     try {
-      await Promise.all(
-        Array.from(selectedIds).map(id => axiosPrivate.delete(`/orders/${id}`))
-      );
+      await Promise.all(Array.from(selectedIds).map(id => axiosPrivate.delete(`/orders/${id}`)));
       toast.success(`${selectedIds.size} order(s) deleted successfully`);
       setIsBulkDeleteOpen(false);
       setSelectedIds(new Set());
-      if (activeTab === "orders") fetchOrders();
-      if (activeTab === "pending") fetchPendingOrders();
+      refetchAll();
     } catch {
       toast.error("Failed to delete some orders");
     } finally {
@@ -435,107 +499,27 @@ const OrdersManagement = () => {
     }
   };
 
-  // ── Confirm cash submission ────────────────────────────────────────────────
+  // ── Handlers: Cash confirm ─────────────────────────────────────────────────
+
   const handleConfirmCash = async (order: Order) => {
     try {
       await axiosPrivate.put(`/orders/${order._id}/webhook-status`, {
-        status: "pending",
+        status: "paid",
         paymentStatus: "paid",
       });
       toast.success("Cash confirmed successfully");
-      fetchCashOrders();
+      // completed+paid → isTotalReceived → lives in cash tab
+      await refetchAll("cash");
     } catch {
       toast.error("Failed to confirm cash");
     }
   };
 
-  // ── Shared: Account + Summary cards ───────────────────────────────────────
-  const renderTopCards = (summary: {
-    totalReceived: number;
-    confirmedCount: number;
-    pendingToReceive: number;
-    pendingOrders: number;
-    pendingSubmissions: number;
-    pendingSubmissionsCount: number;
-    confirmed: number;
-    confirmedSubmissions: number;
-  }) => (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-      {/* Account Details */}
-      <div className="lg:col-span-2 border rounded-xl p-5 bg-white">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-            <Package className="w-5 h-5 text-blue-600" />
-          </div>
-          <div>
-            <p className="font-semibold text-sm">Account Details</p>
-            <p className="text-xs text-muted-foreground">Accounts Department</p>
-          </div>
-        </div>
-        <div className="space-y-3">
-          {[
-            { label: "Name", value: accountUser?.name || "—" },
-            { label: "Email", value: accountUser?.email || "—" },
-            { label: "Role", value: accountUser?.role ? capitalize(accountUser.role) : "—" },
-          ].map(row => (
-            <div key={row.label} className="flex justify-between items-center border-b pb-2 last:border-0">
-              <span className="text-sm text-muted-foreground">{row.label}:</span>
-              <span className="text-sm font-medium">{row.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+  // ── Row actions ────────────────────────────────────────────────────────────
 
-      {/* Total Received */}
-      <div className="border rounded-xl p-5 bg-green-50 border-green-200">
-        <div className="flex items-center gap-2 mb-2">
-          <CheckCircle2 className="w-5 h-5 text-green-600" />
-          <p className="font-semibold text-green-800">Total Received</p>
-        </div>
-        <p className="text-xs text-green-600 mb-3">All confirmed cash collections</p>
-        <p className="text-3xl font-bold text-green-700">
-          ${summary.totalReceived.toFixed(2)}
-        </p>
-        <p className="text-xs text-green-600 mt-1">
-          From {summary.confirmedCount} confirmed submission(s)
-        </p>
-      </div>
-    </div>
-  );
-
-  const renderStatCards = (summary: typeof cashSummary) => (
-    <div className="grid grid-cols-3 gap-4 mb-4">
-      <div className="border rounded-xl p-4 bg-white">
-        <div className="flex items-center gap-2 mb-1">
-          <Clock className="w-4 h-4 text-orange-500" />
-          <p className="text-sm text-muted-foreground">Pending to Receive</p>
-        </div>
-        <p className="text-xl font-bold text-orange-500">${summary.pendingToReceive.toFixed(2)}</p>
-        <p className="text-xs text-muted-foreground mt-1">{summary.pendingOrders} order(s) with pending payment</p>
-      </div>
-      <div className="border rounded-xl p-4 bg-white">
-        <div className="flex items-center gap-2 mb-1">
-          <AlertCircle className="w-4 h-4 text-purple-500" />
-          <p className="text-sm text-muted-foreground">Pending Submissions</p>
-        </div>
-        <p className="text-xl font-bold text-purple-500">${summary.pendingSubmissions.toFixed(2)}</p>
-        <p className="text-xs text-muted-foreground mt-1">{summary.pendingSubmissionsCount} submission(s) to confirm</p>
-      </div>
-      <div className="border rounded-xl p-4 bg-white">
-        <div className="flex items-center gap-2 mb-1">
-          <CheckCircle2 className="w-4 h-4 text-green-600" />
-          <p className="text-sm text-muted-foreground">Confirmed</p>
-        </div>
-        <p className="text-xl font-bold text-green-600">${summary.confirmed.toFixed(2)}</p>
-        <p className="text-xs text-muted-foreground mt-1">{summary.confirmedSubmissions} confirmed submission(s)</p>
-      </div>
-    </div>
-  );
-
-  // ── Action buttons for each row ────────────────────────────────────────────
   const renderActions = (order: Order) => (
     <div className="flex items-center gap-1">
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewDetail(order)} title="View">
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedOrder(order); setIsDetailOpen(true); }} title="View">
         <Eye className="h-4 w-4" />
       </Button>
       {!isReadOnly && (
@@ -546,7 +530,8 @@ const OrdersManagement = () => {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenHistory(order)} title="Status history">
             <History className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600" onClick={() => handleOpenDelete(order)} title="Delete">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600"
+            onClick={() => { setSelectedOrder(order); setIsDeleteOpen(true); }} title="Delete">
             <Trash2 className="h-4 w-4" />
           </Button>
         </>
@@ -554,7 +539,8 @@ const OrdersManagement = () => {
     </div>
   );
 
-  // ─── RENDER ────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
     <div className="p-6 space-y-4 bg-gray-50 min-h-screen">
 
@@ -562,7 +548,7 @@ const OrdersManagement = () => {
       {isReadOnly && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 text-sm text-yellow-800 flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0 text-yellow-600" />
-          Read-Only Mode: You have full access to view all admin pages and data, but CRUD operations (create, update, delete) are disabled
+          Read-Only Mode: You have full access to view all admin pages and data, but CRUD operations are disabled.
         </div>
       )}
 
@@ -573,35 +559,26 @@ const OrdersManagement = () => {
           <p className="text-muted-foreground text-sm mt-1">View and manage all customer orders</p>
         </div>
         <div className="flex items-center gap-3">
-          <Select value={String(perPage)} onValueChange={(value: string) => {
-            const num = Number(value);
-            setPerPage(num);
-            setPage(1);
-          }}>
+          <Select value={String(perPage)} onValueChange={v => { setPerPage(Number(v)); setPage(1); }}>
             <SelectTrigger className="w-28 bg-white">
               <SelectValue>{perPage} / page</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="10">10 / page</SelectItem>
-              <SelectItem value="20">20 / page</SelectItem>
-              <SelectItem value="30">30 / page</SelectItem>
-              <SelectItem value="50">50 / page</SelectItem>
+              {[10, 20, 30, 50].map(n => (
+                <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={async () => {
-            let success = false;
-            if (activeTab === "orders") success = await fetchOrders(true);
-            if (activeTab === "cash") success = await fetchCashOrders();
-            if (activeTab === "pending") success = await fetchPendingOrders();
-            if (success) toast.success("Orders refreshed");
-          }} disabled={refreshing} className="bg-white">
+          <Button variant="outline" onClick={refreshCurrentTab} disabled={refreshing} className="bg-white">
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-            <Package className="w-4 h-4 text-white" />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+              <Package className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-blue-600">{total || orders.length}</span>
           </div>
-          <span className="font-bold text-blue-600">{total || orders.length}</span>
         </div>
       </div>
 
@@ -611,15 +588,14 @@ const OrdersManagement = () => {
           { key: "pending", label: "Pending", icon: Clock },
           { key: "cash", label: "Cash Received", icon: CheckCircle2 },
           { key: "orders", label: "Orders", icon: Package },
-        ] as { key: ActiveTab; label: string; icon: any }[]).map(tab => (
+        ] as { key: ActiveTab; label: string; icon: React.ElementType }[]).map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`flex items-center gap-2 px-6 py-2 text-sm font-semibold transition-all rounded-lg
               ${activeTab === tab.key
-                ? "bg-white text-foreground  shadow-sm"
-                : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
-              }`}
+                ? "bg-white text-foreground shadow-sm"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}
           >
             <tab.icon className="w-4 h-4" />
             {tab.label}
@@ -627,287 +603,235 @@ const OrdersManagement = () => {
         ))}
       </div>
 
+      {/* Shared summary cards (all tabs) */}
+      <TopCards summary={cashSummary} userName={user?.name} userEmail={user?.email} userRole={user?.role} />
+      <StatCards summary={cashSummary} />
+
       {/* ── TAB: PENDING ──────────────────────────────────────────────────── */}
+      {/* status: pending | paymentStatus: pending */}
       {activeTab === "pending" && (
-        <div className="space-y-4">
-          {renderTopCards(cashSummary)}
-          {renderStatCards(cashSummary)}
-
-          {/* Pending Cash Submissions section */}
-          <div className="border rounded-xl bg-white overflow-hidden">
-            <div className="px-5 py-4 bg-purple-50 border-b flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                <Package className="w-4 h-4 text-purple-600" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm text-purple-800">Pending Cash Submissions</p>
-                <p className="text-xs text-purple-600">Review and confirm cash submissions from deliverymen</p>
-              </div>
+        <div className="border rounded-xl bg-white overflow-hidden">
+          <div className="px-5 py-4 bg-purple-50 border-b flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+              <Package className="w-4 h-4 text-purple-600" />
             </div>
-
-            {pendingLoading ? (
-              <div className="flex justify-center items-center py-16">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : pendingOrders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <CheckCircle2 className="w-10 h-10 mb-3 opacity-30" />
-                <p className="text-sm">No pending submissions to confirm</p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {pendingOrders.map(order => (
-                  <div key={order._id} className="px-5 py-4 flex items-center justify-between hover:bg-gray-50">
-                    <div>
-                      <p className="font-medium text-sm">{order.orderId}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Collected by: {order.user?.name} on {fmtDate(order.createdAt)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-semibold">${order.totalAmount?.toFixed(2)}</span>
-                      {!isReadOnly && (
-                        <Button size="sm" onClick={() => handleConfirmCash(order)} className="bg-green-600 hover:bg-green-700 text-white">
-                          Confirm
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div>
+              <p className="font-semibold text-sm text-purple-800">Pending Cash Submissions</p>
+              <p className="text-xs text-purple-600">Review and confirm cash submissions from deliverymen</p>
+            </div>
           </div>
+
+          {pendingLoading ? <Spinner /> : pendingOrders.length === 0 ? (
+            <EmptyState icon={CheckCircle2} message="No pending submissions to confirm" />
+          ) : (
+            <div className="divide-y">
+              {pendingOrders.map(order => (
+                <div key={order._id} className="px-5 py-4 flex items-center justify-between hover:bg-gray-50">
+                  <div>
+                    <p className="font-medium text-sm">{order.orderId}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Collected by: {order.user?.name} on {fmtDate(order.createdAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold">${order.totalAmount?.toFixed(2)}</span>
+                    {!isReadOnly && (
+                      <Button size="sm" onClick={() => handleConfirmCash(order)}
+                        className="bg-green-600 hover:bg-green-700 text-white">
+                        Confirm
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* ── TAB: CASH RECEIVED ────────────────────────────────────────────── */}
+      {/* status: pending | paymentStatus: paid */}
       {activeTab === "cash" && (
-        <div className="space-y-4">
-          {renderTopCards(cashSummary)}
-          {renderStatCards(cashSummary)}
-
-          {/* Cash Received list */}
-          <div className="border rounded-xl bg-white overflow-hidden">
-            <div className="px-5 py-4 bg-green-50 border-b flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="w-4 h-4 text-green-600" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm text-green-800">Cash Received</p>
-                <p className="text-xs text-green-600">Successfully confirmed cash collections</p>
-              </div>
+        <div className="border rounded-xl bg-white overflow-hidden">
+          <div className="px-5 py-4 bg-green-50 border-b flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
             </div>
+            <div>
+              <p className="font-semibold text-sm text-green-800">Cash Received</p>
+              <p className="text-xs text-green-600">Successfully confirmed cash collections</p>
+            </div>
+          </div>
 
-            {cashLoading ? (
-              <div className="flex justify-center items-center py-16">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : cashOrders.filter(o => o.status === "completed" || o.paymentStatus === "paid").length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <CheckCircle2 className="w-10 h-10 mb-3 opacity-30" />
-                <p className="text-sm">No confirmed cash collections yet</p>
-              </div>
+          {cashLoading ? <Spinner /> : (() => {
+            const confirmed = cashOrders.filter(isPendingSubmission);
+            return confirmed.length === 0 ? (
+              <EmptyState icon={CheckCircle2} message="No confirmed cash collections yet" />
             ) : (
               <div className="divide-y">
-                {cashOrders
-                  .filter(o => o.status === "completed" || o.paymentStatus === "paid")
-                  .map(order => (
-                    <div key={order._id} className="px-5 py-4 hover:bg-gray-50">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-sm">Order #{order.orderId}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Collected by: {order.user?.name} on {fmtDate(order.createdAt)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Confirmed: {fmtDate(order.updatedAt)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-green-600">${order.totalAmount?.toFixed(2)}</span>
-                        </div>
+                {confirmed.map(order => (
+                  <div key={order._id} className="px-5 py-4 hover:bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">Order #{order.orderId}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {order.paymentMethod === "cod" ? "Collected by" : "Paid by"}: {order.user?.name} on {fmtDate(order.createdAt)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Updated: {fmtDate(order.updatedAt)}</p>
                       </div>
-                      <div className="mt-2">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                          Confirmed
-                        </span>
-                      </div>
+                      <span className="font-bold text-green-600">${order.totalAmount?.toFixed(2)}</span>
                     </div>
-                  ))}
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
+            );
+          })()}
         </div>
       )}
 
       {/* ── TAB: ORDERS ───────────────────────────────────────────────────── */}
       {activeTab === "orders" && (
-        <div className="space-y-4">
-          {renderTopCards(cashSummary)}
-          {renderStatCards(cashSummary)}
-
-          {/* Delivered Orders section */}
-          <div className="border rounded-xl bg-white overflow-hidden">
-            <div className="px-5 py-4 bg-blue-50 border-b flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Package className="w-4 h-4 text-blue-600" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm text-blue-800">Delivered Orders</p>
-                <p className="text-xs text-blue-600">All delivered orders for review</p>
-              </div>
+        <div className="border rounded-xl bg-white overflow-hidden">
+          <div className="px-5 py-4 bg-blue-50 border-b flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Package className="w-4 h-4 text-blue-600" />
             </div>
-
-            {/* Bulk delete banner */}
-            {selectedIds.size > 0 && (
-              <div className="px-5 py-3 bg-blue-50 border-b flex items-center justify-between">
-                <div className="flex items-center gap-2 text-blue-700 text-sm font-medium">
-                  <Package className="w-4 h-4" />
-                  {selectedIds.size} order(s) selected
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={unselectAll}>Unselect All</Button>
-                  <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white" onClick={() => setIsBulkDeleteOpen(true)}>
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Delete Selected
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Filters */}
-            <div className="px-5 py-3 border-b flex items-center gap-3 bg-white flex-wrap">
-              <div className="relative flex-1 max-w-xs">
-                <Input
-                  placeholder="Search orders..."
-                  value={searchQuery}
-                  onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
-                  className="pl-3 h-9 text-sm"
-                />
-              </div>
-              <Select value={filterStatus} onValueChange={v => { setFilterStatus(v); setPage(1); }}>
-                <SelectTrigger className="w-36 h-9 text-sm bg-white">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  {ORDER_STATUS_OPTIONS.map(s => (
-                    <SelectItem key={s} value={s}>{capitalize(s)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={sortOrder} onValueChange={v => { setSortOrder(v as "asc" | "desc"); setPage(1); }}>
-                <SelectTrigger className="w-36 h-9 text-sm bg-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desc">Newest First</SelectItem>
-                  <SelectItem value="asc">Oldest First</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterPayment} onValueChange={v => { setFilterPayment(v); setPage(1); }}>
-                <SelectTrigger className="w-36 h-9 text-sm bg-white">
-                  <SelectValue placeholder="All Payments" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Payments</SelectItem>
-                  {PAYMENT_STATUS_OPTIONS.map(s => (
-                    <SelectItem key={s} value={s}>{capitalize(s)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div>
+              <p className="font-semibold text-sm text-blue-800">Delivered Orders</p>
+              <p className="text-xs text-blue-600">All delivered orders for review</p>
             </div>
-
-            {/* Table */}
-            {loading ? (
-              <div className="flex justify-center items-center py-16">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    {!isReadOnly && (
-                      <TableHead className="w-10">
-                        <Checkbox
-                          checked={orders.length > 0 && selectedIds.size === orders.length}
-                          onCheckedChange={checked => {
-                            if (checked) setSelectedIds(new Set(orders.map(o => o._id)));
-                            else setSelectedIds(new Set());
-                          }}
-                        />
-                      </TableHead>
-                    )}
-                    <TableHead className="text-xs font-semibold">Order ID</TableHead>
-                    <TableHead className="text-xs font-semibold">Customer</TableHead>
-                    <TableHead className="text-xs font-semibold">Items</TableHead>
-                    <TableHead className="text-xs font-semibold">Total</TableHead>
-                    <TableHead className="text-xs font-semibold">Status</TableHead>
-                    <TableHead className="text-xs font-semibold">Payment</TableHead>
-                    <TableHead className="text-xs font-semibold">Date</TableHead>
-                    <TableHead className="text-xs font-semibold">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-16 text-muted-foreground text-sm">
-                        No orders found
-                      </TableCell>
-                    </TableRow>
-                  ) : orders.map(order => (
-                    <TableRow key={order._id} className={selectedIds.has(order._id) ? "bg-blue-50" : ""}>
-                      {!isReadOnly && (
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedIds.has(order._id)}
-                            onCheckedChange={() => toggleSelect(order._id)}
-                          />
-                        </TableCell>
-                      )}
-                      <TableCell className="font-mono text-sm font-semibold">{order.orderId}</TableCell>
-                      <TableCell>
-                        <p className="font-medium text-sm">{order.user?.name}</p>
-                        <p className="text-xs text-muted-foreground">{order.user?.email}</p>
-                      </TableCell>
-                      <TableCell className="text-sm">{order.items?.length ?? 0} items</TableCell>
-                      <TableCell className="font-semibold text-sm">${order.totalAmount?.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass(order.status)}`}>
-                          {capitalize(order.status)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${paymentBadgeClass(order.paymentStatus)}`}>
-                          {capitalize(order.paymentStatus)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{fmtDate(order.createdAt)}</TableCell>
-                      <TableCell>{renderActions(order)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-
-            {/* Pagination */}
-            {total > 0 && (
-              <div className="px-5 py-3 border-t flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">
-                  Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} of {total} orders
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm">{page} / {totalPages}</span>
-                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
+
+          {/* Bulk delete banner */}
+          {selectedIds.size > 0 && (
+            <div className="px-5 py-3 bg-blue-50 border-b flex items-center justify-between">
+              <div className="flex items-center gap-2 text-blue-700 text-sm font-medium">
+                <Package className="w-4 h-4" />
+                {selectedIds.size} order(s) selected
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+                  Unselect All
+                </Button>
+                <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white"
+                  onClick={() => setIsBulkDeleteOpen(true)}>
+                  <Trash2 className="w-4 h-4 mr-1" /> Delete Selected
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Filters */}
+          <div className="px-5 py-3 border-b flex items-center gap-3 bg-white flex-wrap">
+            <Input
+              placeholder="Search orders..."
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
+              className="flex-1 max-w-xs h-9 text-sm"
+            />
+            {[
+              {
+                value: filterStatus, onChange: (v: string) => { setFilterStatus(v); setPage(1); },
+                placeholder: "All Status", options: ORDER_STATUS_OPTIONS,
+              },
+              {
+                value: sortOrder, onChange: (v: string) => { setSortOrder(v as "asc" | "desc"); setPage(1); },
+                placeholder: "Sort", options: null,
+              },
+              {
+                value: filterPayment, onChange: (v: string) => { setFilterPayment(v); setPage(1); },
+                placeholder: "All Payments", options: PAYMENT_STATUS_OPTIONS,
+              },
+            ].map((sel, i) => (
+              <Select key={i} value={sel.value} onValueChange={sel.onChange}>
+                <SelectTrigger className="w-36 h-9 text-sm bg-white">
+                  <SelectValue placeholder={sel.placeholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {sel.options === null ? (
+                    <>
+                      <SelectItem value="desc">Newest First</SelectItem>
+                      <SelectItem value="asc">Oldest First</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="all">{sel.placeholder}</SelectItem>
+                      {sel.options.map(s => (
+                        <SelectItem key={s} value={s}>{capitalize(s)}</SelectItem>
+                      ))}
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            ))}
+          </div>
+
+          {/* Table */}
+          {loading ? <Spinner /> : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  {!isReadOnly && (
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={orders.length > 0 && selectedIds.size === orders.length}
+                        onCheckedChange={checked => selectAll(!!checked)}
+                      />
+                    </TableHead>
+                  )}
+                  {["Order ID", "Customer", "Items", "Total", "Status", "Payment", "Date", "Actions"].map(h => (
+                    <TableHead key={h} className="text-xs font-semibold">{h}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-16 text-muted-foreground text-sm">
+                      No orders found
+                    </TableCell>
+                  </TableRow>
+                ) : orders.map(order => (
+                  <TableRow key={order._id} className={selectedIds.has(order._id) ? "bg-blue-50" : ""}>
+                    {!isReadOnly && (
+                      <TableCell>
+                        <Checkbox checked={selectedIds.has(order._id)} onCheckedChange={() => toggleSelect(order._id)} />
+                      </TableCell>
+                    )}
+                    <TableCell className="font-mono text-sm font-semibold">{order.orderId}</TableCell>
+                    <TableCell>
+                      <p className="font-medium text-sm">{order.user?.name}</p>
+                      <p className="text-xs text-muted-foreground">{order.user?.email}</p>
+                    </TableCell>
+                    <TableCell className="text-sm">{order.items?.length ?? 0} items</TableCell>
+                    <TableCell className="font-semibold text-sm">${order.totalAmount?.toFixed(2)}</TableCell>
+                    <TableCell><StatusBadge status={order.status} /></TableCell>
+                    <TableCell><PaymentBadge status={order.paymentStatus} /></TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{fmtDate(order.createdAt)}</TableCell>
+                    <TableCell>{renderActions(order)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+
+          {/* Pagination */}
+          {total > 0 && (
+            <div className="px-5 py-3 border-t flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} of {total} orders
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm">{page} / {totalPages}</span>
+                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -932,7 +856,7 @@ const OrdersManagement = () => {
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Customer Information</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Customer</p>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="font-semibold">{selectedOrder.user?.name}</p>
                   <p className="text-muted-foreground text-xs">{selectedOrder.user?.email}</p>
@@ -951,15 +875,11 @@ const OrdersManagement = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Order Status</p>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${statusBadgeClass(selectedOrder.status)}`}>
-                    {capitalize(selectedOrder.status)}
-                  </span>
+                  <StatusBadge status={selectedOrder.status} />
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Payment Status</p>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${paymentBadgeClass(selectedOrder.paymentStatus)}`}>
-                    {capitalize(selectedOrder.paymentStatus)}
-                  </span>
+                  <PaymentBadge status={selectedOrder.paymentStatus} />
                 </div>
               </div>
 
@@ -1037,22 +957,17 @@ const OrdersManagement = () => {
             <div>
               <p className="font-semibold text-xs uppercase text-muted-foreground mb-2">Shipping Address</p>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Street</Label>
-                  <Input value={editStreet} onChange={e => setEditStreet(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">City</Label>
-                  <Input value={editCity} onChange={e => setEditCity(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Zip Code</Label>
-                  <Input value={editZip} onChange={e => setEditZip(e.target.value)} />
-                </div>
-                <div className="space-y-1 col-span-2">
-                  <Label className="text-xs">Country</Label>
-                  <Input value={editCountry} onChange={e => setEditCountry(e.target.value)} />
-                </div>
+                {[
+                  { label: "Street", value: editStreet, setter: setEditStreet, span: false },
+                  { label: "City", value: editCity, setter: setEditCity, span: false },
+                  { label: "Zip Code", value: editZip, setter: setEditZip, span: false },
+                  { label: "Country", value: editCountry, setter: setEditCountry, span: true },
+                ].map(({ label, value, setter, span }) => (
+                  <div key={label} className={`space-y-1 ${span ? "col-span-2" : ""}`}>
+                    <Label className="text-xs">{label}</Label>
+                    <Input value={value} onChange={e => setter(e.target.value)} />
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -1060,7 +975,7 @@ const OrdersManagement = () => {
               <div className="flex justify-between items-center mb-2">
                 <p className="font-semibold text-xs uppercase text-muted-foreground">Order Items</p>
                 <Button variant="outline" size="sm" onClick={handleAddItem} className="h-7 text-xs">
-                  <Plus className="w-3 h-3 mr-1" />Add Product
+                  <Plus className="w-3 h-3 mr-1" /> Add Product
                 </Button>
               </div>
               <div className="space-y-3">
@@ -1068,7 +983,8 @@ const OrdersManagement = () => {
                   <div key={idx} className="border rounded-lg p-3 space-y-2">
                     <div className="flex justify-between items-center">
                       <p className="text-xs font-medium text-muted-foreground">Item #{idx + 1}</p>
-                      <Button variant="outline" size="sm" className="h-6 text-xs text-red-500 border-red-200" onClick={() => handleRemoveItem(idx)}>
+                      <Button variant="outline" size="sm" className="h-6 text-xs text-red-500 border-red-200"
+                        onClick={() => handleRemoveItem(idx)}>
                         — Remove
                       </Button>
                     </div>
@@ -1087,7 +1003,9 @@ const OrdersManagement = () => {
                       </div>
                     </div>
                     <div className="flex justify-end">
-                      <p className="text-xs text-muted-foreground">Total: <span className="font-semibold text-foreground">${item.totalPrice.toFixed(2)}</span></p>
+                      <p className="text-xs text-muted-foreground">
+                        Total: <span className="font-semibold text-foreground">${item.totalPrice.toFixed(2)}</span>
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -1114,14 +1032,10 @@ const OrdersManagement = () => {
           <DialogHeader>
             <DialogTitle>Order Status History</DialogTitle>
             <DialogDescription>
-              View the complete timeline of status changes for order {selectedOrder?.orderId}
+              Timeline of status changes for order {selectedOrder?.orderId}
             </DialogDescription>
           </DialogHeader>
-          {historyLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : (
+          {historyLoading ? <Spinner /> : (
             <div className="space-y-3 max-h-[60vh] overflow-y-auto">
               {statusHistory.length === 0 ? (
                 <p className="text-sm text-center text-muted-foreground py-8">No history found</p>
@@ -1133,9 +1047,7 @@ const OrdersManagement = () => {
                   </div>
                   <div className="flex-1 bg-gray-50 rounded-lg p-3 mb-2">
                     <div className="flex justify-between items-start mb-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass(h.status)}`}>
-                        {capitalize(h.status)}
-                      </span>
+                      <StatusBadge status={h.status} />
                       <span className="text-xs text-muted-foreground">{fmtDateTime(h.createdAt)}</span>
                     </div>
                     <p className="text-xs"><span className="font-semibold">Changed by:</span> {h.changedBy}</p>
@@ -1160,11 +1072,8 @@ const OrdersManagement = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteOrder}
-              disabled={deleteLoading}
-              className="bg-red-500 hover:bg-red-600 text-white"
-            >
+            <AlertDialogAction onClick={handleDeleteOrder} disabled={deleteLoading}
+              className="bg-red-500 hover:bg-red-600 text-white">
               {deleteLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</> : "Delete Order"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1183,11 +1092,8 @@ const OrdersManagement = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={bulkDeleteLoading}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleBulkDelete}
-              disabled={bulkDeleteLoading}
-              className="bg-red-500 hover:bg-red-600 text-white"
-            >
+            <AlertDialogAction onClick={handleBulkDelete} disabled={bulkDeleteLoading}
+              className="bg-red-500 hover:bg-red-600 text-white">
               {bulkDeleteLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</> : "Delete Selected"}
             </AlertDialogAction>
           </AlertDialogFooter>

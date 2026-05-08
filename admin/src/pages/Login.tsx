@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { LogIn, UserPlus } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 
 type FormData = z.infer<typeof loginSchema>
@@ -47,11 +48,11 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await login(data);
-      toast("Welcome to the dashboard");
-      navigate("/dashboard");
+      toast.success("Login successful! Welcome back.");
+      setTimeout(() => navigate("/dashboard"), 1000);
     } catch (error) {
       console.log("Failed to login", error);
-      toast("Invalid credentials");
+      toast.error("Invalid email or password. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -60,6 +61,7 @@ export default function LoginPage() {
   return (
     <div className='min-h-screen w-full bg-gradient-to-br from-indigo-500 via-purple-500 
     to-pink-500 flex items-center justify-center'>
+      <Toaster position="bottom-right" richColors />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -174,18 +176,18 @@ export default function LoginPage() {
                             r="10"
                             stroke="currentColor"
                             strokeWidth="4"
-                            />
-                              <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8v8H4z"
-                              />
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v8H4z"
+                          />
                         </svg>
                         Signing in ...
                       </span>
-                    ) : ( 
+                    ) : (
                       <span className="flex items-center gap-2">
-                        <LogIn size={16}/>
+                        <LogIn size={16} />
                         Sign In
                       </span>
                     )}

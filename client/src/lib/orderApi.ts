@@ -232,11 +232,13 @@ export const updateOrderStatus = async (
   status: "pending" | "paid" | "completed" | "cancelled",
   token: string,
   paymentIntentId?: string,
-  stripeSessionId?: string
+  stripeSessionId?: string,
+  paymentStatus?: "pending" | "paid" | "failed"
 ): Promise<{ success: boolean; order?: Order; message?: string }> => {
   try {
     const body = JSON.stringify({
       status,
+      paymentStatus,
       paymentIntentId,
       stripeSessionId,
     });

@@ -26,10 +26,11 @@ export const handlePaymentSuccess = async (
     // First, try to update the order status directly
     const updateResult = await updateOrderStatus(
       orderId,
-      "paid",
+      "pending",
       token,
       paymentIntentId,
-      sessionId
+      sessionId,
+      "paid"
     );
 
     if (updateResult.success && updateResult.order) {
@@ -73,7 +74,7 @@ export const handlePaymentSuccess = async (
 export const pollOrderStatus = async (
   orderId: string,
   token: string,
-  expectedStatus: string = "paid",
+  expectedPaymentStatus: string = "paid",
   maxAttempts: number = 6,
   intervalMs: number = 5000
 ): Promise<PaymentStatusResult> => {
@@ -86,14 +87,17 @@ export const pollOrderStatus = async (
       try {
         const order = await getOrderById(orderId, token);
 
-        if (order && order.status === expectedStatus) {
+        if (
+          order &&
+          (order.paymentStatus === expectedPaymentStatus || order.status === expectedPaymentStatus)
+        ) {
           console.log(
-            `PaymentUtils: Order status updated to ${expectedStatus} via polling`
+            `PaymentUtils: Order payment status updated to ${expectedPaymentStatus} via polling`
           );
           resolve({
             success: true,
             order,
-            message: `Order status updated to ${expectedStatus}`,
+            message: `Order payment status updated to ${expectedPaymentStatus}`,
           });
           return;
         }

@@ -71,7 +71,19 @@ const userSchema = mongoose.Schema({
             },
         },
     ],
-    //order
+    // Thêm vào userSchema, sau phần cart:
+    googleId: {
+        type: String,
+        default: null,
+    },
+    otp: {
+        type: String,
+        default: null,
+    },
+    otpExpiry: {
+        type: Date,
+        default: null,
+    },
 },
     {
         timestamps: true,
@@ -86,10 +98,11 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 //Encrypt password using bcrypt
 userSchema.pre("save", async function (next) {
     if (!this.isModified("password")) {
-        next();
+        return next();
     }
     const salt = await bcrypt.genSalt(10)
     this.password = await bcrypt.hash(this.password, salt);
+    next();
 });
 
 // ensure only one address is default

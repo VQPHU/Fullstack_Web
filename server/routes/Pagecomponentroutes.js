@@ -25,9 +25,9 @@ router.get("/component-types", protect, admin, getComponentTypes);
 router.patch("/reorder", protect, admin, reorderPageComponents);
 
 // CRUD
-router.get("/", protect, admin, getAllPageComponents);
+router.get("/", protect, getAllPageComponents);
 router.post("/", protect, admin, createPageComponent);
-router.get("/:id", protect, admin, getPageComponentById);
+router.get("/:id", protect, getPageComponentById);
 router.put("/:id", protect, admin, updatePageComponent);
 router.delete("/:id", protect, admin, deletePageComponent);
 

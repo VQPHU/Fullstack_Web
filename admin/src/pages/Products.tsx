@@ -13,7 +13,7 @@ import { Brand, Category, Product, ProductType } from '@/lib/type';
 import { productSchema } from '@/lib/validation';
 import useAuthStore from '@/store/useAuthStore';
 import { AxiosError } from 'axios';
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Edit, Loader2, Plus, RefreshCw, Trash } from 'lucide-react';
+import { AlertCircle, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Edit, Loader2, Plus, RefreshCw, Trash } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner';
 import { useForm } from "react-hook-form";
@@ -320,6 +320,14 @@ const Products = () => {
 
   return (
     <div className="p-5 space-y-6">
+      {/* Read-only banner */}
+      {!isAdmin && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 text-sm text-yellow-800 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 text-yellow-600" />
+          Read-Only Mode: You have full access to view all admin pages and data, but CRUD operations are disabled.
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <div className="flex items-end gap-3">
           <h1 className="text-3xl font-bold">Products</h1>

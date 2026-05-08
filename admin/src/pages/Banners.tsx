@@ -41,7 +41,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AlertDialogFooter } from "@/components/ui/alert-dialog";
-import { Edit, Loader2, Plus, Trash, RefreshCw } from "lucide-react";
+import { Edit, Loader2, Plus, Trash, RefreshCw, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import ImageUpLoad from "@/components/ui/image.upload";
 import { bannerSchema } from "@/lib/validation";
@@ -188,6 +188,13 @@ export default function BannersPage() {
 
   return (
     <div className="p-5 space-y-6">
+      {/* Read-only banner */}
+      {!isAdmin && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 text-sm text-yellow-800 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 text-yellow-600" />
+          Read-Only Mode: You have full access to view all admin pages and data, but CRUD operations are disabled.
+        </div>
+      )}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Banners</h1>
         <div className="flex items-center gap-2">

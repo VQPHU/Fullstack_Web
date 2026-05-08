@@ -136,15 +136,6 @@ const Addresses = () => {
 
     return (
         <div className="p-5 space-y-5">
-
-            {/* Read-only banner */}
-            {!isAdmin && (
-                <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-3 text-sm">
-                    🔒 Read-Only Mode: You have full access to view all admin pages and data,
-                    but CRUD operations (create, update, delete) are disabled
-                </div>
-            )}
-
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -257,14 +248,14 @@ const Addresses = () => {
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center py-12">
-                                    <div className="flex flex-col items-center gap-4">
-                                        <MapPin className="h-12 w-12 text-gray-400" />
-                                        <div>
-                                            <p className="text-lg font-medium text-gray-900">No addresses found</p>
-                                            <p className="text-sm text-gray-500">
+                                    <div className="flex flex-col items-center justify-center py-6">
+                                        <h1 className="text-8xl font-bold text-gray-200">404</h1>
+                                        <div className="-mt-8">
+                                            <p className="text-xl font-semibold text-gray-800">No addresses found</p>
+                                            <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
                                                 {searchTerm
-                                                    ? "Try adjusting your search"
-                                                    : "No customer addresses yet"}
+                                                    ? "We couldn't find any results matching your search criteria."
+                                                    : "The address directory is empty or you don't have permission to access these records."}
                                             </p>
                                         </div>
                                     </div>

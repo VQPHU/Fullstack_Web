@@ -11,7 +11,7 @@ import {
 const router = express.Router();
 
 router.get("/", getWebsiteIcons);
-router.get("/:id", protect, admin, getWebsiteIconById);
+router.get("/:id", protect, getWebsiteIconById);
 
 router.post("/", protect, admin, createWebsiteIcon);
 router.put("/:id", protect, admin, updateWebsiteIcon);

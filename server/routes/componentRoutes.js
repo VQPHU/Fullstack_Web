@@ -11,7 +11,7 @@ const router = express.Router();
 router.get("/homepage", getHomepage);
 
 // Admin routes
-router.get("/", protect, admin, getAllComponents);
+router.get("/", protect, getAllComponents);
 router.put("/:id", protect, admin, updateComponent);
 
 export default router;

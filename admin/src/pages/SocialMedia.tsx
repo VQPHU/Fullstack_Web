@@ -12,6 +12,7 @@ import useAuthStore from "@/store/useAuthStore";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AxiosError } from "axios";
 import {
+  AlertCircle,
   ChevronLeft, ChevronRight, Edit, ExternalLink, Facebook,
   Filter, Globe, Instagram, Linkedin, Loader2,
   MessageCircle, Plus, RefreshCw, Send, Share2,
@@ -302,6 +303,15 @@ const SocialMediaPage = () => {
 
   return (
     <div className="p-5 space-y-6">
+      {/* Read-only banner */}
+      {!isAdmin && (
+        <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2.5 text-sm text-yellow-800">
+          <AlertCircle className="w-4 h-4 text-yellow-600 shrink-0" />
+          Read-Only Mode: You have full access to view all admin pages and data,
+          but CRUD operations (create, update, delete) are disabled
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

@@ -10,7 +10,7 @@ const router = express.Router();
 router.route("/").get(getProducts).post(protect, admin, createProduct);
 
 // Reviews routes phải đứng TRƯỚC /:id
-router.route("/reviews").get(protect, admin, getAllReviews);
+router.route("/reviews").get(protect, getAllReviews);
 router.route("/reviews/:productId/:reviewId/approve").put(protect, admin, approveReview);
 router.route("/reviews/:productId/:reviewId").delete(protect, admin, deleteReview);
 

@@ -228,7 +228,25 @@ const Account = () => {
     );
   }
 
-  const { overview, inventory, sales } = data!;
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
+        <h1 className="text-9xl font-bold text-gray-200">404</h1>
+        <h2 className="text-2xl font-semibold text-gray-800 -mt-12 mb-4">Access Denied / Not Found</h2>
+        <p className="text-gray-500 mb-8 max-w-sm">
+          The analytics data could not be retrieved. You might not have the required permissions to access this dashboard.
+        </p>
+        <Link
+          to="/dashboard"
+          className="px-6 py-2.5 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-all shadow-sm"
+        >
+          Return to Dashboard
+        </Link>
+      </div>
+    );
+  }
+
+  const { overview, inventory, sales } = data;
 
   return (
     <motion.div

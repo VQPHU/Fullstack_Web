@@ -407,16 +407,17 @@ const EmployeesPage = () => {
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center py-12">
-                                    <div className="flex flex-col items-center gap-4">
-                                        <Users className="h-12 w-12 text-gray-400" />
-                                        <div>
-                                            <p className="text-lg font-medium text-gray-900">
+                                    <div className="flex flex-col items-center justify-center py-6">
+                                        <h1 className="text-8xl font-bold text-gray-200">404</h1>
+                                        <div className="-mt-8">
+                                            <p className="text-xl font-semibold text-gray-800">
                                                 No employees found
                                             </p>
-                                            <p className="text-sm text-gray-500">
+                                            <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
                                                 {searchTerm || roleFilter !== "all"
-                                                    ? "Try adjusting your search or filters"
-                                                    : "Employees will appear here once added"}
+                                                    ? "We couldn't find any results matching your search or filters."
+                                                    : "The employee directory is empty or you don't have permission to access these records."
+                                                }
                                             </p>
                                         </div>
                                     </div>

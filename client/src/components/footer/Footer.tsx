@@ -10,7 +10,6 @@ import { payment } from "../../assets/image";
 
 const informationTab = [
     { title: "About Us", href: "/about" },
-    { title: "Top Searches", href: "/search" },
     { title: "Privacy Policy", href: "/privacy" },
     { title: "Terms and Conditions", href: "/terms" },
 ];
@@ -21,10 +20,10 @@ const CustomerTab = [
     { title: "Wishlist", href: "/user/wishlist" },
 ];
 const OthersTab = [
-    { title: "Partnership Programs", href: "/programs" },
-    { title: "Associate Program", href: "/programs" },
-    { title: "Wholesale Socks", href: "/programs" },
-    { title: "Wholesale Funny Socks", href: "/programs" },
+    { title: "Partnership Programs", href: "/blog" },
+    { title: "Associate Program", href: "/blog" },
+    { title: "Wholesale Socks", href: "/blog" },
+    { title: "Wholesale Funny Socks", href: "/blog" },
 ];
 
 const Footer = () => {

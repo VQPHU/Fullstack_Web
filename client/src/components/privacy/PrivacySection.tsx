@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import PageBreadcrumb from "../common/PageBreadcrumb";
 
 interface PrivacyData {
   _id: string;
@@ -91,15 +92,15 @@ const PrivacySection = ({ data }: Props) => {
 
   const lastUpdated = privacy.lastUpdated
     ? new Date(privacy.lastUpdated).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
     : null;
 
   return (
     <div className="max-w-4xl mx-auto py-4">
-
+      <PageBreadcrumb items={[{ label: "Home", href: "/" }]} currentPage="Privacy Policy" />
       {/* Hero */}
       <div className="grid grid-cols-1 md:grid-cols-2 border border-[#ededed] rounded-xl overflow-hidden mb-6">
         <div className="bg-[#fafafa] p-8 flex flex-col gap-4">

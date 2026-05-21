@@ -23,7 +23,8 @@ interface AboutComponent {
 
 const AboutPage = async () => {
   const result = await fetchData<{ components: AboutComponent[] }>(
-    "/page-components/public/about"
+    "/page-components/public/about",
+    { next: { revalidate: 0 } }
   );
 
   const components = result?.components || [];

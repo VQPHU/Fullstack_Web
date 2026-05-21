@@ -30,7 +30,7 @@ import componentRoutes from "./routes/componentRoutes.js";
 import pageComponentRoutes from "./routes/Pagecomponentroutes.js";
 import notificationAdminRoutes from "./routes/notificationAdminRoutes.js";
 import privacyRoutes from "./routes/privacyRoutes.js";
-
+import termsConditionsRoutes from "./routes/termsConditionsRoutes.js";
 // Load env vars
 dotenv.config();
 
@@ -111,6 +111,7 @@ app.use("/api/components", componentRoutes);
 app.use("/api/page-components", pageComponentRoutes);
 app.use("/api/notification-admin", notificationAdminRoutes);
 app.use("/api/privacy", privacyRoutes);
+app.use("/api/terms-conditions", termsConditionsRoutes);
 
 // API Documentation
 app.use(

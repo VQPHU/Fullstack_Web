@@ -338,30 +338,9 @@ const ProfilePage = () => {
         try {
             let uploadedAvatarUrl = avatarUrl;
 
-            // Nếu có file mới, upload lên server trước (giả sử có endpoint upload)
-            if (avatarFile) {
-                const formData = new FormData();
-                formData.append("file", avatarFile);
-                try {
-                    const token = auth_token;
-                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/upload`, {
-                        method: "POST",
-                        headers: {
-                            ...(token && { Authorization: `Bearer ${token}` }),
-                        },
-                        credentials: "include",
-                        body: formData,
-                    });
-                    if (response.ok) {
-                        const uploadRes = await response.json();
-                        if (uploadRes?.success && uploadRes?.data?.url) {
-                            uploadedAvatarUrl = uploadRes.data.url;
-                        }
-                    }
-                } catch {
-                    // fallback: dùng base64 preview nếu không có upload endpoint
-                    uploadedAvatarUrl = avatarPreview || avatarUrl;
-                }
+            // Nếu có file mới, convert sang base64 và gửi lên server
+            if (avatarFile && avatarPreview) {
+                uploadedAvatarUrl = avatarPreview;
             }
 
             const res = await authApi.put(`/users/${authUser._id}`, {

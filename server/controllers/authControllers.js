@@ -46,7 +46,7 @@ const registerUser = asyncHandler(async (req, res) => {
 // @route   POST /api/auth/login
 // @access  Public
 const loginUser = asyncHandler(async (req, res) => {
-    const { email, password } = await req.body;
+    const { email, password } = req.body;
     const user = await User.findOne({ email });
 
     if (user && (await user.matchPassword(password))) {

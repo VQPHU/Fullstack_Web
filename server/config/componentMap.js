@@ -4,6 +4,7 @@ import Brand from "../models/brandModel.js";
 import productType from "../models/productTypeModel.js";
 import AdsBanner from "../models/adsBannerModel.js";
 import Category from "../models/categoryModel.js";
+import About from "../models/aboutmodel.js"; 
 
 export const COMPONENT_MAP = {
   home_banner: async () => await Banner.find(),
@@ -12,4 +13,5 @@ export const COMPONENT_MAP = {
   home_product_types: async () => await productType.find(),
   ads_banner: async () => await AdsBanner.find(),
   categories: async () => await Category.find(),
+  about: async () => await About.find(),
 };

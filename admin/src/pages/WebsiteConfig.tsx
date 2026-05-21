@@ -261,137 +261,142 @@ const WebsiteConfig = () => {
     };
 
     // ── Shared form body ──────────────────────────────────────────────────────
-    const renderFormBody = (form: typeof formAdd) => (
-        <>
-            <FormField
-                control={form.control}
-                name="pageType"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Page Type <span className="text-destructive">*</span></FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+    const renderFormBody = (form: typeof formAdd) => {
+        const selectedType = form.watch("componentType");
+        const masterDisabled = masterTypes.find(t => t.name === selectedType)?.isActive === false;
+
+        return (
+            <>
+                <FormField
+                    control={form.control}
+                    name="pageType"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Page Type <span className="text-destructive">*</span></FormLabel>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                                <FormControl>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {PAGE_TABS.map((o) => (
+                                        <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="componentType"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Component Type <span className="text-destructive">*</span></FormLabel>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                                <FormControl>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {componentTypes.map((t) => (
+                                        <SelectItem key={t.value} value={t.value}>
+                                            {t.label || t.value}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Title <span className="text-destructive">*</span></FormLabel>
                             <FormControl>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <Input {...field} placeholder="e.g., Hero Banner, Featured Products" disabled={formLoading} />
                             </FormControl>
-                            <SelectContent>
-                                {PAGE_TABS.map((o) => (
-                                    <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
-            <FormField
-                control={form.control}
-                name="componentType"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Component Type <span className="text-destructive">*</span></FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Description</FormLabel>
                             <FormControl>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <textarea
+                                    {...field}
+                                    rows={3}
+                                    placeholder="Optional description for internal reference"
+                                    disabled={formLoading}
+                                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                                />
                             </FormControl>
-                            <SelectContent>
-                                {componentTypes.map((t) => (
-                                    <SelectItem key={t.value} value={t.value}>
-                                        {t.label || t.value}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
-            <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Title <span className="text-destructive">*</span></FormLabel>
-                        <FormControl>
-                            <Input {...field} placeholder="e.g., Hero Banner, Featured Products" disabled={formLoading} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-
-            <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                            <textarea
-                                {...field}
-                                rows={3}
-                                placeholder="Optional description for internal reference"
-                                disabled={formLoading}
-                                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-                            />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-
-            <FormField
-                control={form.control}
-                name="displayOrder"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>
-                            Display Order (Weight) <span className="text-destructive">*</span>
-                            <span className="text-muted-foreground font-normal ml-1.5 text-xs">
-                                Lower numbers appear first (0 = top)
-                            </span>
-                        </FormLabel>
-                        <FormControl>
-                            <Input
-                                type="number"
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                disabled={formLoading}
-                            />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-
-            <FormField
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                    <FormItem>
-                        <div className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                                <FormLabel className="text-sm font-medium cursor-pointer">
-                                    Active Status
-                                </FormLabel>
-                                <p className="text-sm text-muted-foreground">
-                                    Component is visible on the website
-                                </p>
-                            </div>
+                <FormField
+                    control={form.control}
+                    name="displayOrder"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>
+                                Display Order (Weight) <span className="text-destructive">*</span>
+                                <span className="text-muted-foreground font-normal ml-1.5 text-xs">
+                                    Lower numbers appear first (0 = top)
+                                </span>
+                            </FormLabel>
                             <FormControl>
-                                <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
+                                <Input
+                                    type="number"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                                     disabled={formLoading}
                                 />
                             </FormControl>
-                        </div>
-                    </FormItem>
-                )}
-            />
-        </>
-    );
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="isActive"
+                    render={({ field }) => (
+                        <FormItem>
+                            <div className="flex items-center justify-between rounded-lg border p-4">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="text-sm font-medium cursor-pointer">
+                                        Active Status
+                                    </FormLabel>
+                                    <p className="text-sm text-muted-foreground">
+                                        Component is visible on the website
+                                    </p>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        disabled={formLoading || masterDisabled}
+                                    />
+                                </FormControl>
+                            </div>
+                        </FormItem>
+                    )}
+                />
+            </>
+        );
+    };
 
     // ─── RENDER ───────────────────────────────────────────────────────────────
     return (
@@ -441,15 +446,15 @@ const WebsiteConfig = () => {
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key)}
                             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${active
-                                    ? "bg-background text-foreground shadow-sm"
-                                    : "text-muted-foreground hover:text-foreground"
+                                ? "bg-background text-foreground shadow-sm"
+                                : "text-muted-foreground hover:text-foreground"
                                 }`}
                         >
                             {tab.label}
                             {count > 0 && (
                                 <span className={`text-xs font-semibold rounded-full px-1.5 py-px ${active
-                                        ? "bg-primary text-primary-foreground"
-                                        : "bg-muted-foreground/20 text-muted-foreground"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted-foreground/20 text-muted-foreground"
                                     }`}>
                                     {count}
                                 </span>
@@ -572,8 +577,8 @@ const WebsiteConfig = () => {
                                         {selectedComponent.componentType}
                                     </span>
                                     <span className={`text-xs font-semibold px-2 py-0.5 rounded ${selectedComponent.isActive
-                                            ? "bg-green-100 text-green-700"
-                                            : "bg-yellow-100 text-yellow-700"
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-yellow-100 text-yellow-700"
                                         }`}>
                                         {selectedComponent.isActive ? "Active" : "Inactive"}
                                     </span>

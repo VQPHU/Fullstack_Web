@@ -10,6 +10,7 @@ import ProductActions from "@/components/common/pages/product/ProductActions";
 import PriceFormatter from "@/components/common/PriceFormatter";
 import { Box, FileQuestion, Share2, Star, Truck, Package, Tag } from "lucide-react";
 import ProductDescription from "@/components/common/pages/product/ProductDescription";
+import BuyNowButton from "@/components/common/pages/product/BuyNowButton";
 import { payment } from "@/assets/image";
 import RelatedProducts from "@/components/common/pages/product/Relatedproducts";
 
@@ -144,12 +145,7 @@ const SingleProductPage = async ({
                             </div>
                         </div>
 
-                        <a
-                            href="/user/checkout"
-                            className="w-full py-3 text-base font-semibold text-white bg-babyshopSky hover:bg-babyshopSky/90 transition-colors rounded-xl text-center"
-                        >
-                            Buy Now
-                        </a>
+                        <BuyNowButton product={product} />
 
                         <div className="flex items-center border border-babyshopTextLight/30 rounded-xl overflow-hidden">
                             <button className="flex-1 flex items-center justify-center gap-2 py-3 text-sm text-babyshopBlack hover:bg-gray-50 transition-colors">

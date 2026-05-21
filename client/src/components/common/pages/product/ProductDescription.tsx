@@ -122,7 +122,7 @@ const ReviewsSection = ({ product }: { product?: Product }) => {
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm text-gray-900">
-                    {review.userId.name}
+                    {review.userId?.name || "Anonymous"}
                   </span>
                   <div className="flex gap-0.5">
                     {[1, 2, 3, 4, 5].map((s) => (

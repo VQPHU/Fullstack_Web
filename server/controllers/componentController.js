@@ -1,4 +1,5 @@
 import Component from "../models/componentModel.js";
+import PageComponent from "../models/pageComponentModel.js";
 import { COMPONENT_MAP } from ".././config/componentMap.js";
 
 export const getHomepage = async (req, res) => {
@@ -57,6 +58,20 @@ export const updateComponent = async (req, res) => {
 
         if (!component) {
             return res.status(404).json({ error: "Component not found" });
+        }
+
+        // If the master component type is globally disabled, also deactivate all
+        // existing PageComponent documents that reference this type so they
+        // become inactive on the website.
+        if (isActive === false) {
+            try {
+                await PageComponent.updateMany(
+                    { componentType: component.name },
+                    { isActive: false }
+                );
+            } catch (err) {
+                console.error("Failed to deactivate page components:", err);
+            }
         }
 
         res.json({ component });

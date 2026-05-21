@@ -29,6 +29,7 @@ import websiteIconRoutes from "./routes/websiteIconRoutes.js";
 import componentRoutes from "./routes/componentRoutes.js";
 import pageComponentRoutes from "./routes/Pagecomponentroutes.js";
 import notificationAdminRoutes from "./routes/notificationAdminRoutes.js";
+import privacyRoutes from "./routes/privacyRoutes.js";
 
 // Load env vars
 dotenv.config();
@@ -109,6 +110,7 @@ app.use("/api/website-icons", websiteIconRoutes);
 app.use("/api/components", componentRoutes);
 app.use("/api/page-components", pageComponentRoutes);
 app.use("/api/notification-admin", notificationAdminRoutes);
+app.use("/api/privacy", privacyRoutes);
 
 // API Documentation
 app.use(

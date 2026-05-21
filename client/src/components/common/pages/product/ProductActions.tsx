@@ -1,10 +1,11 @@
 "use client"
 import { Product } from '@/types/type';
 import { Loader2, Minus, Plus, ShoppingCart } from 'lucide-react';
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import WishlistButton from './WishlistButton';
 import { Button } from '@/components/ui/button';
 import { useCartStore, useUserStore } from '@/lib/store';
+import { useQuantityStore } from '@/lib/quantityStore';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -18,7 +19,13 @@ const ProductActions: React.FC<ProductActionsProps> = ({ product }) => {
 
   const { addToCart } = useCartStore();
   const { isAuthenticated } = useUserStore();
+  const { setProductQuantity } = useQuantityStore();
   const router = useRouter();
+
+  // Sync quantity to store whenever it changes
+  useEffect(() => {
+    setProductQuantity(product._id, quantity);
+  }, [quantity, product._id, setProductQuantity]);
 
   const handleQuantityChange = (type: "increase" | "decrease") => {
     if (type === "increase") {

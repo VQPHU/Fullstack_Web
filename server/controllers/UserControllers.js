@@ -77,11 +77,18 @@ const updateUser = asyncHandler(async (req, res) => {
 
     // avatar 
     if (req.body.avatar && req.body.avatar !== user.avatar) {
-        //Upload to cloudinary
-        const result = await cloudinary.uploader.upload(req.body.avatar, {
-            folder: "babymartyt/avatars",
-        });
-        user.avatar = result.secure_url;
+        try {
+            //Upload to cloudinary
+            const result = await cloudinary.uploader.upload(req.body.avatar, {
+                folder: "babymartyt/avatars",
+                timeout: 60000, // 60 second timeout
+                resource_type: "auto",
+            });
+            user.avatar = result.secure_url;
+        } catch (uploadError) {
+            console.error("Cloudinary upload error:", uploadError.message);
+            throw new Error(`Avatar upload failed: ${uploadError.message}`);
+        }
     }
     const updateUser = await user.save();
 

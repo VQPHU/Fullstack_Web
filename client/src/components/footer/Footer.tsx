@@ -13,21 +13,18 @@ const informationTab = [
     { title: "Top Searches", href: "/search" },
     { title: "Privacy Policy", href: "/privacy" },
     { title: "Terms and Conditions", href: "/terms" },
-    { title: "Testimonials", href: "/testimonials" },
 ];
 const CustomerTab = [
     { title: "My Account", href: "/user/profile" },
     { title: "Track Order", href: "/user/orders" },
     { title: "Shop", href: "/shop" },
     { title: "Wishlist", href: "/user/wishlist" },
-    { title: "Returns/Exchange", href: "/returns" },
 ];
 const OthersTab = [
     { title: "Partnership Programs", href: "/programs" },
     { title: "Associate Program", href: "/programs" },
     { title: "Wholesale Socks", href: "/programs" },
     { title: "Wholesale Funny Socks", href: "/programs" },
-    { title: "Others", href: "/others" },
 ];
 
 const Footer = () => {

@@ -1,30 +1,39 @@
 import Container from "@/components/common/container";
-import Banner from "@/components/home/Banner";
-import ProductsList from "@/components/home/ProductsList";
-import FeaturedServicesSection from "@/components/home/FeaturedServicesSection";
+import AboutSection from "@/components/about/AboutSection";
 import { fetchData } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-const componentMap: Record<string, React.FC> = {
-  home_banner: Banner,
-  best_deals: ProductsList,
-  featured_services: FeaturedServicesSection,
-};
+interface AboutData {
+  story: { title: string; content: string };
+  mission: { title: string; content: string };
+  whyChooseUs: {
+    title: string;
+    items: { _id: string; title: string; description: string }[];
+  };
+  commitment: { title: string; content: string };
+  _id: string;
+}
+
+interface AboutComponent {
+  componentType: string;
+  title: string;
+  data: AboutData[];
+}
 
 const AboutPage = async () => {
-  const data = await fetchData<{ components: { componentType: string }[] }>(
+  const result = await fetchData<{ components: AboutComponent[] }>(
     "/page-components/public/about"
   );
 
-  const components = data?.components || [];
+  const components = result?.components || [];
+  const aboutComp = components.find((c) => c.componentType === "about");
 
   return (
-    <Container className="py-7 space-y-10">
-      {components.map((c, idx) => {
-        const Comp = componentMap[c.componentType];
-        return Comp ? <Comp key={idx} /> : null;
-      })}
+    <Container className="min-h-screen py-7">
+      <div className="space-y-10">
+        {aboutComp && <AboutSection data={aboutComp.data} />}
+      </div>
     </Container>
   );
 };

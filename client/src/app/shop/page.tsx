@@ -10,10 +10,16 @@ interface CategoriesResponse {
 interface ProductTypesResponse {
     productTypes: ProductType[];
 }
+interface BrandsResponse {
+    brands: Brand[];
+    total: number;
+    totalPages: number;
+}
 
 const ShopPage = async () => {
-    const brands = await fetchData<Brand[]>('/brands');
+    const brandsData = await fetchData<BrandsResponse>('/brands?perPage=100');
     const productTypesData = await fetchData<ProductTypesResponse>('/product-types?status=Active&perPage=100&sortOrder=asc');
+    const brands = brandsData.brands ?? [];
     let categories: Category[] = [];
     let error: string | null = null;
 

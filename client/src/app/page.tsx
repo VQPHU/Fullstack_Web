@@ -13,11 +13,17 @@ import BabyTravelSection from "@/components/home/BabyTravelSection";
 interface ProductTypesResponse {
   productTypes: ProductType[];
 }
+interface BrandsResponse {
+  brands: Brand[];
+  total: number;
+  totalPages: number;
+}
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const brands = await fetchData<Brand[]>("/brands");
+  const brandsData = await fetchData<BrandsResponse>("/brands?perPage=100"); // ✅
+  const brands = brandsData.brands ?? [];
 
   const { productTypes = [] } = await fetchData<ProductTypesResponse>(
     "/product-types?status=Active&perPage=6&sortOrder=desc"

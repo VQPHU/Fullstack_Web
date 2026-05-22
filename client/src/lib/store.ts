@@ -216,16 +216,25 @@ export const useUserStore = create<UserState>()(
                     const promises = [
                         (async () => {
                             try {
-                                const { getUserWishlist } = await import("./wishlistApi");
+                                const { getUserWishlist, getWishlistProducts } = await import("./wishlistApi");
                                 const { useWishlistStore } = await import("./store");
+
                                 const wishlistResponse = await getUserWishlist(token);
-                                if (wishlistResponse.success) {
-                                    useWishlistStore
-                                        .getState()
-                                        .setWishlistIds(wishlistResponse.wishlist);
+                                if (wishlistResponse.success && wishlistResponse.wishlist.length > 0) {
+                                    // Bước 2: fetch full products
+                                    const productsResponse = await getWishlistProducts(
+                                        wishlistResponse.wishlist,
+                                        token
+                                    );
+                                    if (productsResponse.success) {
+                                        useWishlistStore.getState().setWishlistItems(productsResponse.products);
+                                    }
+                                } else {
+                                    // Wishlist rỗng → clear store
+                                    useWishlistStore.getState().clearWishlist();
                                 }
                             } catch (error) {
-                                console.warn("Failed to load wishlist on login:", error);
+                                console.warn("Failed to load wishlist:", error);
                             }
                         })(),
                         (async () => {
@@ -312,19 +321,21 @@ export const useUserStore = create<UserState>()(
                         });
 
                         try {
-                            const { getUserWishlist } = await import("./wishlistApi");
+                            const { getUserWishlist, getWishlistProducts } = await import("./wishlistApi");
                             const { useWishlistStore } = await import("./store");
 
                             const wishlistResponse = await getUserWishlist(token);
-                            if (wishlistResponse.success) {
-                                useWishlistStore
-                                    .getState()
-                                    .setWishlistIds(wishlistResponse.wishlist);
+                            if (wishlistResponse.success && wishlistResponse.wishlist.length > 0) {
+                                const productsResponse = await getWishlistProducts(wishlistResponse.wishlist, token);
+                                if (productsResponse.success) {
+                                    useWishlistStore.getState().setWishlistItems(productsResponse.products); // ✅
+                                }
+                            } else {
+                                useWishlistStore.getState().clearWishlist();
                             }
                         } catch (wishlistError) {
                             console.warn("Store: Failed to load wishlist:", wishlistError);
                         }
-
                         try {
                             const { useCartStore } = await import("./store");
                             await useCartStore.getState().syncCartFromServer();
@@ -642,12 +653,22 @@ export const loadAllUserData = async (token: string) => {
         const promises = [
             (async () => {
                 try {
-                    const { getUserWishlist } = await import("./wishlistApi");
+                    const { getUserWishlist, getWishlistProducts } = await import("./wishlistApi");
+                    const { useWishlistStore } = await import("./store");
+
                     const wishlistResponse = await getUserWishlist(token);
-                    if (wishlistResponse.success) {
-                        useWishlistStore
-                            .getState()
-                            .setWishlistIds(wishlistResponse.wishlist);
+                    if (wishlistResponse.success && wishlistResponse.wishlist.length > 0) {
+                        // Bước 2: fetch full products
+                        const productsResponse = await getWishlistProducts(
+                            wishlistResponse.wishlist,
+                            token
+                        );
+                        if (productsResponse.success) {
+                            useWishlistStore.getState().setWishlistItems(productsResponse.products);
+                        }
+                    } else {
+                        // Wishlist rỗng → clear store
+                        useWishlistStore.getState().clearWishlist();
                     }
                 } catch (error) {
                     console.warn("Failed to load wishlist:", error);

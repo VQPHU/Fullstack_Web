@@ -306,9 +306,25 @@ const OrderDetailPage = () => {
   const completedSteps = getCompletedSteps(order.status);
   const activeStep = getActiveStep(order.status);
 
-  const subtotal = order.subtotal ?? order.items.reduce((acc, i) => acc + i.price * i.quantity, 0);
-  const shipping = order.shipping ?? 0;
-  const tax = order.tax ?? 0;
+  const TAX_RATE = 0.08;
+
+  const subtotal =
+    order.subtotal ??
+    order.items.reduce(
+      (acc, item) => acc + item.price * item.quantity,
+      0
+    );
+
+  const shipping =
+    order.shipping ??
+    (subtotal > 100 ? 0 : 15);
+
+  const tax =
+    order.tax ??
+    subtotal * TAX_RATE;
+
+  const total =
+    subtotal + shipping + tax;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -364,7 +380,7 @@ const OrderDetailPage = () => {
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
               <p className="text-xs text-gray-400 mb-1">Total Amount</p>
               <p className="text-lg font-bold text-gray-800">
-                <PriceFormatter amount={order.total} />
+                <PriceFormatter amount={total} />
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
@@ -542,7 +558,14 @@ const OrderDetailPage = () => {
             </div>
             <div className="flex justify-between text-gray-600">
               <span>Shipping</span>
-              <PriceFormatter amount={shipping} />
+
+              {shipping === 0 ? (
+                <span className="text-green-600 font-medium">
+                  Free shipping
+                </span>
+              ) : (
+                <PriceFormatter amount={shipping} />
+              )}
             </div>
             <div className="flex justify-between text-gray-600">
               <span>Tax</span>
@@ -551,7 +574,7 @@ const OrderDetailPage = () => {
             <div className="border-t border-gray-100 pt-3 flex justify-between font-bold text-gray-900">
               <span>Total</span>
               <span className="text-teal-600">
-                <PriceFormatter amount={order.total} />
+                <PriceFormatter amount={total} />
               </span>
             </div>
           </div>

@@ -24,9 +24,7 @@ const registerSchema = z
         confirmPassword: z.string().min(8, "Confirm password is required"),
         role: z.literal("user"),
         termsAccepted: z.literal(true, {
-            errorMap: () => ({
-                message: "You must agree to the Privacy Policy and Terms of Use",
-            }),
+            message: "You must agree to the Privacy Policy and Terms of Use",
         }),
     })
     .refine((data) => data.password === data.confirmPassword, {

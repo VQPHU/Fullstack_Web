@@ -114,6 +114,12 @@ export default function WishlistListItem({
           )}
         </div>
 
+        {/* Stock Info */}
+        <div className="flex items-center text-xs mb-3">
+          <span className="text-gray-400 font-medium">In Stock: </span>
+          <span className="text-teal-600 ml-1 font-bold">{product?.stock}</span>
+        </div>
+
         {/* Actions */}
         <div className="flex items-center gap-2">
           <button

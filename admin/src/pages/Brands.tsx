@@ -10,7 +10,7 @@ import { Brand } from '@/lib/type';
 import { brandSchema } from '@/lib/validation';
 import useAuthStore from '@/store/useAuthStore';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Edit, Loader2, Plus, RefreshCw, Trash } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, Edit, Loader2, Plus, RefreshCw, Trash } from 'lucide-react';
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -19,6 +19,10 @@ import { z } from "zod";
 type FormData = z.infer<typeof brandSchema>
 const Brands = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [perPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -48,9 +52,14 @@ const Brands = () => {
   })
 
   const fetchBrands = async () => {
+    setLoading(true);
     try {
-      const response = await axiosPrivate.get("/brands");
-      setBrands(response.data);
+      const response = await axiosPrivate.get("/brands", {
+        params: { page, perPage, sortOrder: "asc" }
+      });
+      setBrands(response.data.brands || response.data || []);
+      setTotal(response.data.total || (Array.isArray(response.data) ? response.data.length : 0));
+      setTotalPages(response.data.totalPages || 1);
     } catch (error) {
       console.log("Failed to load brands");
       toast("Failed to load brands");
@@ -61,7 +70,10 @@ const Brands = () => {
 
   useEffect(() => {
     fetchBrands();
-  }, []);
+  }, [page]);
+
+  const handlePreviousPage = () => page > 1 && setPage(page - 1);
+  const handleNextPage = () => page < totalPages && setPage(page + 1);
 
   const handleAddbrand = async (data: FormData) => {
     setFormLoading(true);
@@ -81,9 +93,11 @@ const Brands = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    setPage(1);
     try {
-      const response = await axiosPrivate.get("/brands");
-      setBrands(response.data);
+      const response = await axiosPrivate.get("/brands", { params: { page: 1, perPage } });
+      setBrands(response.data.brands || response.data || []);
+      setTotal(response.data.total || (Array.isArray(response.data) ? response.data.length : 0));
       toast("Brands refreshed successfully");
     } catch (error) {
       console.log("Failed to refresh successfully", error);
@@ -171,74 +185,120 @@ const Brands = () => {
           <Loader2 className='h-8 w-8 animate-spin' />
         </div>
       ) : (
-        <div className='rounded-md border'>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className='w-[80px]'>Image</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Created At</TableHead>
-                {isAdmin && (
-                  <TableHead className='text-right'>Actions</TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {brands.map((brand) => (
-                <TableRow key={brand._id}>
-                  <TableCell>
-                    {brand.image ? (
-                      <div className='h-12 w-12 rounded overflow-hidden bg-muted'>
-                        <img
-                          src={brand.image}
-                          alt={brand.name}
-                          className='h-full w-full object-cover'
-                        />
-                      </div>
-                    ) : (
-                      <div className='h-12 w-12 rounded bg-muted flex 
-                      items-center justify-center text-muted-foreground'>
-                        No Image
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className='font-medium'>{brand.name}</TableCell>
-                  <TableCell>
-                    {new Date(brand.createdAt).toLocaleDateString()}
-                  </TableCell>
+        <>
+          <div className='rounded-md border'>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className='w-[80px]'>Image</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Created At</TableHead>
                   {isAdmin && (
-                    <TableCell className='text-right' >
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(brand)}
-                      >
-                        <Edit className='h-4 w-4' />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(brand)}
-                      >
-                        <Trash className='h-4 w-4' />
-                      </Button>
-                    </TableCell>
+                    <TableHead className='text-right'>Actions</TableHead>
                   )}
                 </TableRow>
-              ))}
-              {brands.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={isAdmin ? 4 : 3}
-                    className='text-center py-10 text-muted-foreground'
-                  >
-                    No brands found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {brands.map((brand) => (
+                  <TableRow key={brand._id}>
+                    <TableCell>
+                      {brand.image ? (
+                        <div className='h-12 w-12 rounded overflow-hidden bg-muted'>
+                          <img
+                            src={brand.image}
+                            alt={brand.name}
+                            className='h-full w-full object-cover'
+                          />
+                        </div>
+                      ) : (
+                        <div className='h-12 w-12 rounded bg-muted flex 
+                      items-center justify-center text-muted-foreground'>
+                          No Image
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className='font-medium'>{brand.name}</TableCell>
+                    <TableCell>
+                      {new Date(brand.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className='text-right' >
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(brand)}
+                        >
+                          <Edit className='h-4 w-4' />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(brand)}
+                        >
+                          <Trash className='h-4 w-4' />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+                {brands.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={isAdmin ? 4 : 3}
+                      className='text-center py-10 text-muted-foreground'
+                    >
+                      No brands found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination Controls */}
+          {total > perPage && (
+            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-card rounded-lg border border-border/50 px-4 py-3 shadow-sm">
+              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+                <div className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium">{(page - 1) * perPage + 1}</span> to{" "}
+                  <span className="font-medium">{Math.min(page * perPage, total)}</span> of{" "}
+                  <span className="font-medium">{total}</span> brands
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Page <span className="font-medium">{page}</span> of{" "}
+                  <span className="font-medium">{totalPages}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={page === 1}
+                  className="disabled:opacity-50"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={page >= totalPages}
+                  className="disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          )}
+          {total > 0 && total <= perPage && (
+            <div className="mt-4 text-center text-sm text-muted-foreground bg-card rounded-lg border border-border/50 px-4 py-3">
+              Showing all <span className="font-medium">{total}</span> brands
+            </div>
+          )}
+        </>
       )}
 
       {/* Add brands */}
@@ -337,8 +397,7 @@ const Brands = () => {
                     <FormMessage />
                   </FormItem>
                 )}
-              >
-              </FormField>
+              />
 
               <FormField
                 control={formEdit.control}
@@ -356,8 +415,7 @@ const Brands = () => {
                     <FormMessage />
                   </FormItem>
                 )}
-              >
-              </FormField>
+              />
               <DialogFooter>
                 <Button
                   type='button'

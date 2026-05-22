@@ -23,9 +23,17 @@ const getCategories = asyncHandler(async (req, res) => {
     }
 
     const skip = (page - 1) * perPage;
-    const total = await Category.countDocuments({});
+
+    // Support filtering by categoryType via query param
+    const categoryType = req.query.categoryType;
+    const filter = {};
+    if (categoryType && categoryType !== "all") {
+        filter.categoryType = categoryType;
+    }
+
+    const total = await Category.countDocuments(filter);
     const sortValue = sortOrder === "asc" ? 1 : -1; // 1 for asc, -1 for desc 
-    const categories = await Category.find({})
+    const categories = await Category.find(filter)
         .skip(skip)
         .limit(perPage)
         .sort({ createdAt: sortValue }) // sort by createdAt 
@@ -63,7 +71,7 @@ const createCategory = asyncHandler(async (req, res) => {
     }
 
     // Validate categoryType
-    const validCategoryTypes = ["Featured", "Hot Categories", "Top", "Categories"];
+    const validCategoryTypes = ["Featured", "Hot Categories", "Top Categories"];
     if (!validCategoryTypes.includes(categoryType)) {
         res.status(400);
         throw new Error("Invalid category type");

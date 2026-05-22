@@ -8,8 +8,22 @@ import cloudinary from "../config/cloudinary.js";
 // @access Private 
 
 const getBrands = asyncHandler(async (req, res) => {
-    const brands = await Brand.find({});
-    res.json(brands);
+    const page = Number(req.query.page) || 1;
+    const perPage = Number(req.query.perPage) || 10;
+    const skip = (page - 1) * perPage;
+
+    const total = await Brand.countDocuments({});
+    const brands = await Brand.find({})
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(perPage);
+
+    res.json({
+        brands,
+        total,
+        page,
+        totalPages: Math.ceil(total / perPage),
+    });
 });
 
 // @desc Get brand by ID 
@@ -105,4 +119,4 @@ const deleteBrand = asyncHandler(async (req, res) => {
     }
 });
 
-export { getBrands, getBrandById, createBrand, updateBrand, deleteBrand}
+export { getBrands, getBrandById, createBrand, updateBrand, deleteBrand }

@@ -32,6 +32,8 @@ const Products = () => {
   const [perPage] = useState(10); // Default perPage = 10;
   const [totalPages, setTotalPages] = useState(1); // Track total pages
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc"); // Default asc
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -80,7 +82,14 @@ const Products = () => {
     try {
       const currentPage = resetPage ? 1 : page;
       const response = await axiosPrivate.get("/products", {
-        params: { page: currentPage, perPage, sortOrder, includeInactiveTypes: true },
+        params: {
+          page: currentPage,
+          perPage,
+          sortOrder,
+          includeInactiveTypes: true,
+          productType: typeFilter !== "all" ? typeFilter : undefined,
+          category: categoryFilter !== "all" ? categoryFilter : undefined
+        },
       });
 
       setProducts(response.data.products || []);
@@ -159,7 +168,7 @@ const Products = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [page, sortOrder]);
+  }, [page, sortOrder, typeFilter, categoryFilter]);
 
   useEffect(() => {
     fetchCategories();
@@ -295,16 +304,27 @@ const Products = () => {
   const handleRefresh = async () => {
     setRefreshing(true);
 
+    // Reset filters and state to defaults
+    setTypeFilter("all");
+    setCategoryFilter("all");
+    setSortOrder("asc");
+    setPage(1);
+
     try {
       const response = await axiosPrivate.get("/products", {
-        params: { page, perPage, sortOrder, includeInactiveTypes: true },
+        params: {
+          page: 1,
+          perPage,
+          sortOrder: "asc",
+          includeInactiveTypes: true,
+        },
       });
 
       setProducts(response?.data?.products || []);
       setTotal(response?.data?.total || 0);
       setTotalPages(response?.data?.totalPages || 1);
 
-      toast("Products refreshed successfully");
+      toast("Filters reset and products refreshed successfully");
     } catch (error) {
       console.log("Failed to refresh products", error);
       toast("Failed to refresh products");
@@ -348,6 +368,46 @@ const Products = () => {
             />
             {refreshing ? "Refreshing..." : "Refresh"}
           </Button>
+
+          <Select
+            value={typeFilter}
+            onValueChange={(value) => {
+              setTypeFilter(value);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-40 bg-background text-sm shadow-sm hover:bg-muted/10 focus:ring-2 focus:ring-ring">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              {productTypes.map((type) => (
+                <SelectItem key={type._id} value={type._id}>
+                  {type.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={categoryFilter}
+            onValueChange={(value) => {
+              setCategoryFilter(value);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-40 bg-background text-sm shadow-sm hover:bg-muted/10 focus:ring-2 focus:ring-ring">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category._id} value={category._id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <Select
             value={sortOrder}

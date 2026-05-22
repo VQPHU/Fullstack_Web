@@ -363,21 +363,46 @@ const ProductTypes = () => {
           </div>
 
           {/* Pagination */}
-          {total > 0 && (
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                Showing {(page - 1) * perPage + 1} to {Math.min(page * perPage, total)} of {total} product types
+          {total > perPage && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-card rounded-lg border border-border/50 px-4 py-3 shadow-sm">
+              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+                <div className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium">{(page - 1) * perPage + 1}</span> to{" "}
+                  <span className="font-medium">{Math.min(page * perPage, total)}</span> of{" "}
+                  <span className="font-medium">{total}</span> product types
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Page <span className="font-medium">{page}</span> of{" "}
+                  <span className="font-medium">{totalPages}</span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={page === 1}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={page === 1}
+                  className="disabled:opacity-50"
+                >
                   <ChevronLeft className="h-4 w-4 mr-2" />
                   Previous
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleNextPage} disabled={page === totalPages}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={page >= totalPages || page * perPage >= total}
+                  className="disabled:opacity-50"
+                >
                   Next
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
+            </div>
+          )}
+          {total > 0 && total <= perPage && (
+            <div className="text-center text-sm text-muted-foreground bg-card rounded-lg border border-border/50 px-4 py-3">
+              Showing all <span className="font-medium">{total}</span> product types
             </div>
           )}
         </>

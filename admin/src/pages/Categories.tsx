@@ -26,6 +26,7 @@ const Categories = () => {
   const [perPage] = useState(10); // Default perPage = 10
   const [totalPages, setTotalPages] = useState(1); // Track total pages
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")  // default asc
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -60,7 +61,12 @@ const Categories = () => {
     setLoading(true);
     try {
       const response = await axiosPrivate.get("/categories", {
-        params: { page, perPage, sortOrder },
+        params: {
+          page,
+          perPage,
+          sortOrder,
+          categoryType: typeFilter !== "all" ? typeFilter : undefined
+        },
       });
       setCategories(response?.data?.categories || []);
       setTotal(response?.data?.total || 0);
@@ -75,7 +81,7 @@ const Categories = () => {
 
   useEffect(() => {
     fetchCategories();
-  }, [page, sortOrder]);
+  }, [page, sortOrder, typeFilter]);
 
   const handlePreviousPage = () => {
     if (page > 1) {
@@ -173,14 +179,24 @@ const Categories = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
+
+    // Reset filters and state to defaults
+    setTypeFilter("all");
+    setSortOrder("asc");
+    setPage(1);
+
     try {
       const response = await axiosPrivate.get("/categories", {
-        params: { page, perPage, sortOrder },
+        params: {
+          page: 1,
+          perPage,
+          sortOrder: "asc"
+        },
       });
       setCategories(response?.data?.categories || []);
       setTotal(response?.data?.total || 0);
       setTotalPages(response?.data?.totalPages || 1);
-      toast("categories refreshed successfully");
+      toast("Filters reset and categories refreshed successfully");
     } catch (error) {
       console.log("Failed to refresh successfully", error);
       toast("Failed to refresh successfully");
@@ -220,6 +236,25 @@ const Categories = () => {
             />
             {refreshing ? "Refreshing ..." : "Refresh"}
           </Button>
+
+          <Select
+            value={typeFilter}
+            onValueChange={(value) => {
+              setTypeFilter(value);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-40 bg-background text-sm shadow-sm hover:bg-muted/10 focus:ring-2 focus:ring-ring">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="Featured">Featured</SelectItem>
+              <SelectItem value="Hot Categories">Hot Categories</SelectItem>
+              <SelectItem value="Top Categories">Top Categories</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Select
             value={sortOrder}
             onValueChange={handleSortChange}
@@ -330,11 +365,18 @@ const Categories = () => {
           </div>
 
           {/* Pagination Controls  */}
-          {total > 0 && (
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                Showing {(page - 1) * perPage + 1} to {" "}
-                {Math.min(page * perPage, total)} of (total) categories
+          {total > perPage && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-card rounded-lg border border-border/50 px-4 py-3 shadow-sm">
+              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+                <div className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium">{(page - 1) * perPage + 1}</span> to{" "}
+                  <span className="font-medium">{Math.min(page * perPage, total)}</span> of{" "}
+                  <span className="font-medium">{total}</span> categories
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Page <span className="font-medium">{page}</span> of{" "}
+                  <span className="font-medium">{totalPages}</span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -342,21 +384,27 @@ const Categories = () => {
                   size="sm"
                   onClick={handlePreviousPage}
                   disabled={page === 1}
+                  className="disabled:opacity-50"
                 >
                   <ChevronLeft className="h-4 w-4 mr-2" />
                   Previous
                 </Button>
-
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleNextPage}
-                  disabled={page === totalPages}
+                  disabled={page >= totalPages || page * perPage >= total}
+                  className="disabled:opacity-50"
                 >
                   Next
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
+            </div>
+          )}
+          {total > 0 && total <= perPage && (
+            <div className="text-center text-sm text-muted-foreground bg-card rounded-lg border border-border/50 px-4 py-3">
+              Showing all <span className="font-medium">{total}</span> categories
             </div>
           )}
         </>

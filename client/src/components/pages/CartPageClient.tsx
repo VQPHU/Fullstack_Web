@@ -11,6 +11,7 @@ import Link from 'next/link';
 import PageBreadcrumb from '../common/PageBreadcrumb';
 
 import PriceFormatter from '../common/PriceFormatter';
+import { getDiscountedPrice } from '@/lib/price';
 import Image from 'next/image';
 import { Separator } from '../ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
@@ -47,7 +48,8 @@ const CartPageClient = () => {
 
   const calculateSubtotal = () => {
     return cartItemsWithQuantities.reduce(
-      (total, item) => total + item.product.price * item.quantity,
+      (total, item) =>
+        total + getDiscountedPrice(item.product.price, item.product.discountPercentage) * item.quantity,
       0
     );
   };
@@ -96,7 +98,7 @@ const CartPageClient = () => {
     } catch (error) {
       console.error("Failed to clear cart:", error);
       toast.error("Failed to clear cart");
-    }finally{
+    } finally {
       setIsLoading(false);
     }
   };
@@ -274,7 +276,7 @@ const CartPageClient = () => {
                             Price
                           </span>
                           <PriceFormatter
-                            amount={cartItem.product.price}
+                            amount={getDiscountedPrice(cartItem.product.price, cartItem.product.discountPercentage)}
                             className="text-sm font-medium text-gray-900"
                           />
                         </div>
@@ -321,7 +323,7 @@ const CartPageClient = () => {
                           </span>
                           <PriceFormatter
                             amount={
-                              cartItem.product.price * cartItem.quantity
+                              getDiscountedPrice(cartItem.product.price, cartItem.product.discountPercentage) * cartItem.quantity
                             }
                             className="text-sm font-semibold text-gray-900"
                           />
@@ -388,7 +390,7 @@ const CartPageClient = () => {
                   {/* Price */}
                   <div className="lg:col-span-2 text-center">
                     <PriceFormatter
-                      amount={cartItem.product.price}
+                      amount={getDiscountedPrice(cartItem.product.price, cartItem.product.discountPercentage)}
                       className="text-base font-medium text-gray-900"
                     />
                   </div>
@@ -431,7 +433,7 @@ const CartPageClient = () => {
                   {/* Subtotal */}
                   <div className="lg:col-span-2 text-center">
                     <PriceFormatter
-                      amount={cartItem.product.price * cartItem.quantity}
+                      amount={getDiscountedPrice(cartItem.product.price, cartItem.product.discountPercentage) * cartItem.quantity}
                       className="text-base font-semibold text-gray-900"
                     />
                   </div>
@@ -547,35 +549,35 @@ const CartPageClient = () => {
     </div>
 
     {/* Clear Cart Confirmation Modal */}
-      <AlertDialog
-        open={showClearDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            setShowClearDialog(false);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Clear Cart</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to clear your cart? This action cannot be
-              undone and all items will be removed from your cart.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowClearDialog(false)}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmClearCart}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Yes, Clear Cart
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+    <AlertDialog
+      open={showClearDialog}
+      onOpenChange={(open) => {
+        if (!open) {
+          setShowClearDialog(false);
+        }
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clear Cart</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to clear your cart? This action cannot be
+            undone and all items will be removed from your cart.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setShowClearDialog(false)}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={confirmClearCart}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            Yes, Clear Cart
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </Container>
 
 };

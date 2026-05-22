@@ -6,6 +6,7 @@ import { Address } from '@/types/type';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner';
+import { getDiscountedPrice } from '@/lib/price';
 import CheckoutSkeleton from '../skeleton/CheckoutSkeleton';
 import Container from '@/components/common/container'
 import { Button } from '../ui/button';
@@ -120,12 +121,14 @@ const CheckoutPageClient = () => {
             items: cartItemsWithQuantities.map((item) => ({
               productId: item.product._id,
               name: item.product.name,
-              price: item.product.price,
+              price: getDiscountedPrice(item.product.price, item.product.discountPercentage),
               quantity: item.quantity,
               image: item.product.image,
             })),
             total: cartItemsWithQuantities.reduce(
-              (total, item) => total + item.product.price * item.quantity, 0
+              (total, item) =>
+                total + getDiscountedPrice(item.product.price, item.product.discountPercentage) * item.quantity,
+              0
             ),
             status: "pending",
             paymentStatus: "pending",
@@ -182,7 +185,7 @@ const CheckoutPageClient = () => {
       const orderItems = cartItemsWithQuantities.map((item) => ({
         _id: item.product._id,
         name: item.product.name,
-        price: item.product.price,
+        price: getDiscountedPrice(item.product.price, item.product.discountPercentage),
         quantity: item.quantity,
         image: item.product.image,
       }));

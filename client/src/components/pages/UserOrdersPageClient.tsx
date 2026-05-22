@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useOrderStore, useUserStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { getDiscountedPrice } from '@/lib/price';
 import {
     Loader2,
     RefreshCw,
@@ -65,18 +66,18 @@ const statusBadge = (status: string) => {
     switch (status) {
         case "paid":
         case "completed": return "bg-green-100 text-green-700 border border-green-200";
-        case "cancelled":  return "bg-red-100 text-red-700 border border-red-200";
+        case "cancelled": return "bg-red-100 text-red-700 border border-red-200";
         case "pending":
-        default:           return "bg-yellow-100 text-yellow-700 border border-yellow-200";
+        default: return "bg-yellow-100 text-yellow-700 border border-yellow-200";
     }
 };
 
-const paymentColor = (status: string) => {
-    switch (status) {
+const paymentColor = (paymentStatus: string) => { // Changed parameter to paymentStatus
+    switch (paymentStatus) {
         case "paid":
         case "completed": return "text-green-600";
-        case "cancelled": return "text-red-500";
-        default:          return "text-gray-500";
+        case "failed": return "text-red-500";
+        default: return "text-yellow-700"; // Default to yellow for pending payment
     }
 };
 
@@ -95,7 +96,7 @@ const loadHidden = (userId: string): Set<string> => {
 const saveHidden = (userId: string, ids: Set<string>) => {
     try {
         localStorage.setItem(storageKey(userId), JSON.stringify(Array.from(ids)));
-    } catch {}
+    } catch { }
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -183,7 +184,7 @@ const UserOrdersPageClient = () => {
 
             const result = await createCheckoutSession({
                 items: lineItems,
-                successUrl: `${window.location.origin}/success?orderId=${orderId}`,
+                successUrl: `${window.location.origin}/success?orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
                 cancelUrl: `${window.location.origin}/user/orders`,
                 customerEmail: authUser.email,
                 metadata: { orderId },
@@ -236,11 +237,10 @@ const UserOrdersPageClient = () => {
                         {FILTERS.map(f => (
                             <button
                                 key={f} onClick={() => setFilter(f)}
-                                className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${
-                                    filter === f
-                                        ? "bg-gray-900 text-white border-gray-900"
-                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                                }`}
+                                className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${filter === f
+                                    ? "bg-gray-900 text-white border-gray-900"
+                                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                    }`}
                             >
                                 {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
                                 {f !== "all" && (
@@ -283,90 +283,98 @@ const UserOrdersPageClient = () => {
 
                         {/* Rows */}
                         <div className="divide-y divide-gray-100">
-                            {filteredOrders.map(order => (
-                                <div
-                                    key={order._id}
-                                    className="grid grid-cols-[1fr_1.4fr_0.7fr_0.8fr_0.9fr_1fr_1.4fr] gap-3 px-6 py-4 items-center hover:bg-gray-50/50 transition"
-                                >
-                                    <div className="text-sm font-medium text-gray-700 truncate">
-                                        {order._id.slice(-8)}
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-sm text-gray-500">
-                                        <Calendar className="w-3.5 h-3.5 shrink-0 text-gray-400" />
-                                        {new Date(order.createdAt).toLocaleDateString("en-US", {
-                                            month: "short", day: "numeric", year: "numeric",
-                                        })}
-                                    </div>
-                                    <div className="text-sm text-gray-600">
-                                        {order.items?.length ?? 0}{" "}
-                                        {order.items?.length === 1 ? "item" : "items"}
-                                    </div>
-                                    <div className="text-sm font-semibold text-gray-800">
-                                        <PriceFormatter amount={order.total} />
-                                    </div>
-                                    <div>
-                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusBadge(order.status)}`}>
-                                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                                        </span>
-                                    </div>
-                                    <div className={`flex items-center gap-1.5 text-sm ${paymentColor(order.status)}`}>
-                                        <CreditCard className="w-3.5 h-3.5 shrink-0" />
-                                        {order.paymentMethod === "cod"
-                                            ? "COD"
-                                            : order.status === "paid" || order.status === "completed"
+                            {filteredOrders.map(order => {
+                                const subtotal = order.items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
+                                const shipping = subtotal > 100 || subtotal === 0 ? 0 : 15;
+                                const tax = subtotal * 0.08;
+                                const total = subtotal + shipping + tax;
+
+                                return (
+                                    <div
+                                        key={order._id}
+                                        className="grid grid-cols-[1fr_1.4fr_0.7fr_0.8fr_0.9fr_1fr_1.4fr] gap-3 px-6 py-4 items-center hover:bg-gray-50/50 transition"
+                                    >
+                                        <div className="text-sm font-medium text-gray-700 truncate">
+                                            {order._id.slice(-8)}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                                            <Calendar className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+                                            {new Date(order.createdAt).toLocaleDateString("en-US", {
+                                                month: "short", day: "numeric", year: "numeric",
+                                            })}
+                                        </div>
+                                        <div className="text-sm text-gray-600">
+                                            {order.items?.length ?? 0}{" "}
+                                            {order.items?.length === 1 ? "item" : "items"}
+                                        </div>
+                                        <div className="text-sm font-semibold text-gray-800">
+                                            <PriceFormatter amount={total} />
+                                        </div>
+                                        <div>
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusBadge(order.status)}`}>
+                                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                            </span>
+                                        </div>
+                                        {/* Updated to use order.paymentStatus for display */}
+                                        <div className={`flex items-center gap-1.5 text-sm ${paymentColor(order.paymentStatus)}`}>
+                                            <CreditCard className="w-3.5 h-3.5 shrink-0" />
+                                            {order.paymentStatus === "paid"
                                                 ? "Paid"
-                                                : "Pending"}
+                                                : order.paymentMethod === "cod"
+                                                    ? "COD"
+                                                    : order.paymentStatus === "failed" ? "Failed" : "Pending"}
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                onClick={() => router.push(`/user/orders/${order._id}`)}
+                                                className="w-8 h-8 rounded-lg border border-teal-400 text-teal-500 flex items-center justify-center hover:bg-teal-50 transition shrink-0"
+                                                title="View detail"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </button>
+
+                                            {order.status === "pending" && order.paymentStatus !== "paid" && (
+                                                <button
+                                                    onClick={() => handlePayNow(order._id)}
+                                                    disabled={payingId === order._id}
+                                                    className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold transition disabled:opacity-60 shrink-0"
+                                                >
+                                                    {payingId === order._id
+                                                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                        : <CreditCard className="w-3.5 h-3.5" />}
+                                                    Pay Now
+                                                </button>
+                                            )}
+
+                                            {order.status === "pending" && order.paymentStatus !== "paid" && (
+                                                <button
+                                                    onClick={() => setCancelDialog(order._id)}
+                                                    disabled={cancellingId === order._id}
+                                                    className="w-8 h-8 rounded-lg border border-orange-400 text-orange-500 flex items-center justify-center hover:bg-orange-50 transition disabled:opacity-60 shrink-0"
+                                                    title="Cancel order"
+                                                >
+                                                    {cancellingId === order._id
+                                                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                        : <XCircle className="w-4 h-4" />}
+                                                </button>
+                                            )}
+
+                                            {order.status === "cancelled" && (
+                                                <button
+                                                    onClick={() => setDeleteDialog(order._id)}
+                                                    disabled={deletingId === order._id}
+                                                    className="w-8 h-8 rounded-lg bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition disabled:opacity-60 shrink-0"
+                                                    title="Delete order"
+                                                >
+                                                    {deletingId === order._id
+                                                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                        : <Trash2 className="w-3.5 h-3.5" />}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <button
-                                            onClick={() => router.push(`/user/orders/${order._id}`)}
-                                            className="w-8 h-8 rounded-lg border border-teal-400 text-teal-500 flex items-center justify-center hover:bg-teal-50 transition shrink-0"
-                                            title="View detail"
-                                        >
-                                            <Eye className="w-4 h-4" />
-                                        </button>
-
-                                        {order.status === "pending" && order.paymentMethod !== "cod" && (
-                                            <button
-                                                onClick={() => handlePayNow(order._id)}
-                                                disabled={payingId === order._id}
-                                                className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold transition disabled:opacity-60 shrink-0"
-                                            >
-                                                {payingId === order._id
-                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                    : <CreditCard className="w-3.5 h-3.5" />}
-                                                Pay Now
-                                            </button>
-                                        )}
-
-                                        {order.status === "pending" && (
-                                            <button
-                                                onClick={() => setCancelDialog(order._id)}
-                                                disabled={cancellingId === order._id}
-                                                className="w-8 h-8 rounded-lg border border-orange-400 text-orange-500 flex items-center justify-center hover:bg-orange-50 transition disabled:opacity-60 shrink-0"
-                                                title="Cancel order"
-                                            >
-                                                {cancellingId === order._id
-                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                    : <XCircle className="w-4 h-4" />}
-                                            </button>
-                                        )}
-
-                                        {order.status === "cancelled" && (
-                                            <button
-                                                onClick={() => setDeleteDialog(order._id)}
-                                                disabled={deletingId === order._id}
-                                                className="w-8 h-8 rounded-lg bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition disabled:opacity-60 shrink-0"
-                                                title="Delete order"
-                                            >
-                                                {deletingId === order._id
-                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                    : <Trash2 className="w-3.5 h-3.5" />}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}

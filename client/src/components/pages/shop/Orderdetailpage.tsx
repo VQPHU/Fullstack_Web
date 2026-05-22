@@ -143,28 +143,35 @@ const TIMELINE_STEPS = [
 ];
 
 // Map order status → which steps are "done"
-const getCompletedSteps = (status: string): string[] => {
-  switch (status) {
-    case "pending":
-      return ["order_placed"];
-    case "paid":
-      return ["order_placed", "address_confirmed", "order_confirmed"];
-    case "processing":
-      return ["order_placed", "address_confirmed", "order_confirmed", "order_packed"];
-    case "shipped":
-      return ["order_placed", "address_confirmed", "order_confirmed", "order_packed", "out_for_delivery"];
-    case "completed":
-    case "delivered":
-      return TIMELINE_STEPS.map((s) => s.key);
-    default:
-      return ["order_placed"];
+const getCompletedSteps = (status: string, paymentStatus?: string): string[] => {
+  const completed = ["order_placed"];
+  if (status === "cancelled") return completed;
+
+  // Nếu đã thanh toán, coi như địa chỉ và xác nhận đơn đã xong
+  if (paymentStatus === "paid") {
+    completed.push("address_confirmed", "order_confirmed", "payment_pending");
   }
+
+  // Khi trạng thái là "paid" (đã thanh toán đơn hàng) hoặc "processing", coi như bước đóng gói đã xong
+  if (status === "paid" || status === "processing") {
+    completed.push("order_packed");
+  } else if (status === "shipped") {
+    completed.push("order_packed", "out_for_delivery");
+  } else if (status === "completed" || status === "delivered") {
+    return TIMELINE_STEPS.map((s) => s.key);
+  }
+
+  return [...new Set(completed)];
 };
 
-const getActiveStep = (status: string): string => {
-  if (status === "pending") return "payment_pending";
-  if (status === "paid") return "order_confirmed";
-  if (status === "processing") return "order_packed";
+const getActiveStep = (status: string, paymentStatus?: string): string => {
+  if (status === "cancelled") return "order_placed";
+  // Nếu chưa thanh toán thì đứng ở bước Payment
+  if (paymentStatus !== "paid") return "payment_pending";
+  // Nếu đã thanh toán nhưng chưa xử lý thì đợi đóng gói
+  if (status === "pending" || status === "processing") return "order_packed";
+  // Nếu trạng thái đơn hàng chuyển sang "paid", chuyển sang bước "Out for Delivery"
+  if (status === "paid") return "out_for_delivery";
   if (status === "shipped") return "out_for_delivery";
   if (status === "completed" || status === "delivered") return "delivered";
   return "order_placed";
@@ -223,7 +230,7 @@ const OrderDetailPage = () => {
         quantity: item.quantity,
       }));
 
-      const successUrl = `${window.location.origin}/user/orders`;
+      const successUrl = `${window.location.origin}/success?orderId=${order._id}&session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = `${window.location.origin}/user/orders`;
 
       const result = await createCheckoutSession({
@@ -300,11 +307,10 @@ const OrderDetailPage = () => {
 
   const isPending =
     order.status === "pending" &&
-    order.paymentMethod !== "cod" &&
     order.paymentStatus !== "paid";
 
-  const completedSteps = getCompletedSteps(order.status);
-  const activeStep = getActiveStep(order.status);
+  const completedSteps = getCompletedSteps(order.status, order.paymentStatus);
+  const activeStep = getActiveStep(order.status, order.paymentStatus);
 
   const TAX_RATE = 0.08;
 
@@ -359,7 +365,8 @@ const OrderDetailPage = () => {
 
             {/* Payment status badge */}
             <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border ${order.status === "paid" || order.status === "completed"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border ${
+                order.paymentStatus === "paid" || order.status === "completed"
                 ? "bg-green-50 text-green-700 border-green-200"
                 : order.status === "cancelled"
                   ? "bg-red-50 text-red-600 border-red-200"
@@ -367,8 +374,8 @@ const OrderDetailPage = () => {
                 }`}
             >
               <Clock className="w-3.5 h-3.5" />
-              {order.status === "paid" || order.status === "completed"
-                ? "Payment Confirmed"
+              {order.paymentStatus === "paid" || order.status === "completed"
+                ? "Payment Received"
                 : order.status === "cancelled"
                   ? "Cancelled"
                   : "Payment Pending"}
@@ -626,7 +633,7 @@ const OrderDetailPage = () => {
             Continue Shopping
           </Button>
 
-          {order.status === "pending" && (
+          {order.status === "pending" && order.paymentStatus !== "paid" && (
             <Button
               variant="destructive"
               onClick={() => setCancelDialogOpen(true)}

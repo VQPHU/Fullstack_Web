@@ -508,8 +508,8 @@ const OrdersManagement = () => {
         paymentStatus: "paid",
       });
       toast.success("Cash confirmed successfully");
-      // completed+paid → isTotalReceived → lives in cash tab
-      await refetchAll("cash");
+      await fetchCashOrders();
+      await fetchPendingOrders();
     } catch {
       toast.error("Failed to confirm cash");
     }

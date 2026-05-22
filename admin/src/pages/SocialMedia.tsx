@@ -259,9 +259,10 @@ const SocialMediaPage = () => {
               <FormControl>
                 <Input
                   type="number"
+                  min={0}
                   disabled={formLoading}
                   value={field.value}
-                  onChange={(e) => field.onChange(Number(e.target.value))}
+                  onChange={(e) => field.onChange(Math.max(0, Number(e.target.value)))}
                 />
               </FormControl>
               <p className="text-xs text-muted-foreground">Lower numbers appear first</p>
@@ -436,49 +437,52 @@ const SocialMediaPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {socialMediaLinks.map((item) => (
-                  <TableRow key={item._id}>
-                    <TableCell>
-                      <div className="flex items-center justify-center h-8 w-8 rounded-md border bg-muted">
-                        {getPlatformIcon(item.platform)}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>
-                      <span className="rounded-full border px-2 py-0.5 text-xs">
-                        {item.platform}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline flex items-center gap-1 text-sm max-w-[260px] truncate"
-                      >
-                        {item.url}
-                        <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                      </a>
-                    </TableCell>
-                    <TableCell>{item.order}</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${item.isActive ? "bg-black text-white" : "bg-muted text-muted-foreground"}`}>
-                        {item.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </TableCell>
-                    {isAdmin && (
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item)}>
-                          <Trash className="h-4 w-4" />
-                        </Button>
+                {socialMediaLinks
+                  .slice()
+                  .sort((a, b) => a.order - b.order)
+                  .map((item) => (
+                    <TableRow key={item._id}>
+                      <TableCell>
+                        <div className="flex items-center justify-center h-8 w-8 rounded-md border bg-muted">
+                          {getPlatformIcon(item.platform)}
+                        </div>
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))}
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell>
+                        <span className="rounded-full border px-2 py-0.5 text-xs">
+                          {item.platform}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline flex items-center gap-1 text-sm max-w-[260px] truncate"
+                        >
+                          {item.url}
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                        </a>
+                      </TableCell>
+                      <TableCell>{item.order}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${item.isActive ? "bg-black text-white" : "bg-muted text-muted-foreground"}`}>
+                          {item.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item)}>
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
                 {socialMediaLinks.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-10 text-muted-foreground">

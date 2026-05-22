@@ -163,8 +163,8 @@ export default function NotificationsPage() {
     const result = await clearNotifications(auth_token);
     setSubmitting(false);
     if (result.success) {
-      // Chỉ xóa order notifications, giữ lại admin notifications
-      setNotifications((prev) => prev.filter((n) => n.source === "admin"));
+      // Giữ lại tất cả thông báo KHÔNG PHẢI là từ đơn hàng (giữ lại Admin messages)
+      setNotifications((prev) => prev.filter((n) => n.source !== "order"));
       setOpenClearModal(false);
       toast.success("Order notifications cleared");
     }

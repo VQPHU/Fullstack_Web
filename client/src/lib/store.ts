@@ -76,6 +76,7 @@ interface User {
     name: string;
     email: string;
     avatar?: string;
+    isOAuth?: boolean;
     role: string;
     addresses?: Array<{
         _id: string;

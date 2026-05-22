@@ -493,7 +493,7 @@ const ProfilePage = () => {
     };
 
     // ── isOAuth check ──
-    const isOAuth = false; // TODO: implement OAuth check if needed
+    const isOAuth = authUser?.isOAuth ?? false;
 
     const currentAvatar = avatarPreview || authUser?.avatar || "";
 
@@ -642,6 +642,7 @@ const ProfilePage = () => {
                                                 onChange={(e) => setNewPassword(e.target.value)}
                                                 placeholder="Enter new password"
                                                 className="pr-10 focus:ring-teal-400 border-gray-200"
+                                                disabled={isOAuth}
                                             />
                                             <button
                                                 type="button"
@@ -662,6 +663,7 @@ const ProfilePage = () => {
                                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                                 placeholder="Confirm new password"
                                                 className="pr-10 focus:ring-teal-400 border-gray-200"
+                                                disabled={isOAuth}
                                             />
                                             <button
                                                 type="button"
@@ -693,8 +695,8 @@ const ProfilePage = () => {
 
                                     <Button
                                         type="submit"
-                                        disabled={passwordSubmitting}
-                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                                        disabled={passwordSubmitting || isOAuth}
+                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {passwordSubmitting ? (
                                             <Loader2 className="w-4 h-4 animate-spin mr-2" />

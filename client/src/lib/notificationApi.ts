@@ -69,7 +69,7 @@ export const clearNotifications = async (
   token: string
 ): Promise<{ success: boolean; message?: string }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notification-admin`, {
+    const response = await fetch(`${API_BASE_URL}/notifications`, {
       method: "DELETE",
       headers: getAuthHeaders(token),
     });

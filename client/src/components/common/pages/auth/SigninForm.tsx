@@ -54,7 +54,7 @@ const SigninForm = () => {
             if (response.success && response.data) {
                 const { token, ...userData } = response.data;
                 setAuthToken(token);
-                updateUser(userData);
+                updateUser({ ...userData, isOAuth: false });
                 return true;
             } else {
                 toast.error("Login failed. Please check your credentials and try again. ",);
@@ -84,7 +84,7 @@ const SigninForm = () => {
             if (response.success && response.data) {
                 const { token, ...userData } = response.data;
                 setAuthToken(token);
-                updateUser(userData);
+                updateUser({ ...userData, isOAuth: true });
                 toast.success("Login with Google successfully!");
                 router.push("/user/profile");
             } else {

@@ -220,18 +220,18 @@ export const getAllOrdersAdmin = asyncHandler(async (req, res) => {
     const transformedOrders = orders.map((order) => ({
         _id: order._id,
         orderId: `ORD-${order._id.toString().slice(-6).toUpperCase()}`,
-        user: {
+        user: order.userId ? {
             _id: order.userId._id,
             name: order.userId.name,
             email: order.userId.email,
-        },
+        } : { _id: null, name: "Deleted User", email: "N/A" },
         items: order.items.map((item) => ({
-            products: {
+            products: item.productId ? {
                 _id: item.productId._id,
                 name: item.productId.name,
                 price: item.productId.price,
                 image: item.productId.image,
-            },
+            } : { _id: null, name: item.name || "Deleted Product", price: item.price || 0, image: item.image || "" },
             quantity: item.quantity,
             price: item.price,
         })),

@@ -360,7 +360,6 @@ export const useUserStore = create<UserState>()(
                         throw new Error(response.error?.message || "Registration failed");
                     }
                 } catch (error) {
-                    console.error("Store: Register error:", error);
                     throw error;
                 }
             },

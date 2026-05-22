@@ -2,7 +2,7 @@
 import { useUserStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react'
-import z, { email } from 'zod';
+import z from 'zod';
 import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -15,7 +15,6 @@ import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-// Define the schema for the form, including terms acceptance
 const registerSchema = z
     .object({
         firstName: z.string().min(1, "First name is required"),
@@ -39,6 +38,8 @@ type FormData = z.infer<typeof registerSchema>;
 
 const SignUpForm = () => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isVerifyingEmail, setIsVerifyingEmail] = useState<boolean>(false);
+    const [emailError, setEmailError] = useState<string | null>(null);
     const router = useRouter();
     const { register } = useUserStore();
 
@@ -55,10 +56,46 @@ const SignUpForm = () => {
         },
     });
 
+    const verifyEmail = async (email: string) => {
+        // Chỉ gọi API nếu email đúng định dạng
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) return;
+
+        setIsVerifyingEmail(true);
+        setEmailError(null);
+
+        try {
+            const res = await fetch(
+                `https://emailreputation.abstractapi.com/v1/?api_key=${process.env.NEXT_PUBLIC_ABSTRACT_EMAIL_API_KEY}&email=${encodeURIComponent(email)}`
+            );
+            const data = await res.json();
+
+            const isDeliverable = data?.email_deliverability?.status === "deliverable";
+            const isMxValid = data?.email_deliverability?.is_mx_valid === true;
+            const isDisposable = data?.email_quality?.is_disposable === true;
+
+            if (isDisposable) {
+                setEmailError("Disposable emails are not allowed. Please use a real email address.");
+            } else if (!isDeliverable || !isMxValid) {
+                setEmailError("This email address does not appear to be valid or deliverable.");
+            } else {
+                setEmailError(null);
+            }
+        } catch (error) {
+            console.error("Email verification error:", error);
+            // Không block user nếu API lỗi
+        } finally {
+            setIsVerifyingEmail(false);
+        }
+    };
     const onSubmit = async (data: FormData) => {
+        if (emailError) {
+            toast.error("Please enter a valid email address");
+            return;
+        }
+
         setIsLoading(true);
         try {
-            // Combine firstName and lastName into a single name field for registration
             const registerData = {
                 name: `${data.firstName} ${data.lastName}`,
                 email: data.email,
@@ -68,9 +105,18 @@ const SignUpForm = () => {
             await register(registerData);
             toast.success("Registration successful! Please sign in");
             router.push("/auth/signin");
-        } catch (error) {
-            console.log("Registration error:", error);
-            toast.error("Registration failed. Please try again");
+        } catch (error: any) {
+            const message = error?.response?.data?.message || error?.message || "";
+
+            if (message.toLowerCase().includes("user already exists")) {
+                toast.error("This email is already registered. Please sign in instead.");
+                form.setError("email", {
+                    type: "manual",
+                    message: "This email is already registered",
+                });
+            } else {
+                toast.error("Registration failed. Please try again");
+            }
         } finally {
             setIsLoading(false);
         }
@@ -100,10 +146,7 @@ const SignUpForm = () => {
                                                     First Name
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <motion.div
-                                                        whileFocus={{ scale: 1.02 }}
-                                                        transition={{ duration: 0.2 }}
-                                                    >
+                                                    <motion.div whileFocus={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
                                                         <Input
                                                             placeholder="First name"
                                                             disabled={isLoading}
@@ -125,10 +168,7 @@ const SignUpForm = () => {
                                                     Last Name
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <motion.div
-                                                        whileFocus={{ scale: 1.02 }}
-                                                        transition={{ duration: 0.2 }}
-                                                    >
+                                                    <motion.div whileFocus={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
                                                         <Input
                                                             placeholder="Last name"
                                                             disabled={isLoading}
@@ -142,6 +182,8 @@ const SignUpForm = () => {
                                         )}
                                     />
                                 </div>
+
+                                {/* Email field với verify */}
                                 <FormField
                                     control={form.control}
                                     name="email"
@@ -151,36 +193,47 @@ const SignUpForm = () => {
                                                 Email
                                             </FormLabel>
                                             <FormControl>
-                                                <motion.div
-                                                    whileFocus={{ scale: 1.02 }}
-                                                    transition={{ duration: 0.2 }}
-                                                >
-                                                    <Input
-                                                        placeholder="you@example.com"
-                                                        type="email"
-                                                        disabled={isLoading}
-                                                        className="border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                                                        {...field}
-                                                    />
+                                                <motion.div whileFocus={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
+                                                    <div className="relative">
+                                                        <Input
+                                                            placeholder="you@example.com"
+                                                            type="email"
+                                                            disabled={isLoading}
+                                                            className={`border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 pr-10 ${emailError ? "border-red-500" : ""}`}
+                                                            {...field}
+                                                            onBlur={(e) => {
+                                                                field.onBlur();
+                                                                verifyEmail(e.target.value);
+                                                            }}
+                                                        />
+                                                        {isVerifyingEmail && (
+                                                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                                <svg className="animate-spin h-4 w-4 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                                                </svg>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </motion.div>
                                             </FormControl>
                                             <FormMessage className="text-red-500 text-xs" />
+                                            {/* Hiện lỗi verify từ AbstractAPI */}
+                                            {emailError && !isVerifyingEmail && (
+                                                <p className="text-red-500 text-xs mt-1">{emailError}</p>
+                                            )}
                                         </FormItem>
                                     )}
                                 />
+
                                 <FormField
                                     control={form.control}
                                     name="password"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-sm font-medium text-gray-700">
-                                                Password
-                                            </FormLabel>
+                                            <FormLabel className="text-sm font-medium text-gray-700">Password</FormLabel>
                                             <FormControl>
-                                                <motion.div
-                                                    whileFocus={{ scale: 1.02 }}
-                                                    transition={{ duration: 0.2 }}
-                                                >
+                                                <motion.div whileFocus={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
                                                     <Input
                                                         placeholder="••••••••"
                                                         type="password"
@@ -199,14 +252,9 @@ const SignUpForm = () => {
                                     name="confirmPassword"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-sm font-medium text-gray-700">
-                                                Confirm Password
-                                            </FormLabel>
+                                            <FormLabel className="text-sm font-medium text-gray-700">Confirm Password</FormLabel>
                                             <FormControl>
-                                                <motion.div
-                                                    whileFocus={{ scale: 1.02 }}
-                                                    transition={{ duration: 0.2 }}
-                                                >
+                                                <motion.div whileFocus={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
                                                     <Input
                                                         placeholder="••••••••"
                                                         type="password"
@@ -225,9 +273,7 @@ const SignUpForm = () => {
                                     name="role"
                                     render={() => (
                                         <FormItem>
-                                            <FormLabel className="text-sm font-medium text-gray-700">
-                                                Role
-                                            </FormLabel>
+                                            <FormLabel className="text-sm font-medium text-gray-700">Role</FormLabel>
                                             <FormControl>
                                                 <Input
                                                     placeholder="User"
@@ -256,19 +302,9 @@ const SignUpForm = () => {
                                             </FormControl>
                                             <FormLabel className="text-sm text-gray-500 font-normal">
                                                 I agree with the{" "}
-                                                <Link
-                                                    href="/privacy"
-                                                    className="text-indigo-600 hover:text-indigo-800 hover:underline"
-                                                >
-                                                    Privacy Policy
-                                                </Link>{" "}
+                                                <Link href="/privacy" className="text-indigo-600 hover:text-indigo-800 hover:underline">Privacy Policy</Link>{" "}
                                                 and{" "}
-                                                <Link
-                                                    href="/terms"
-                                                    className="text-indigo-600 hover:text-indigo-800 hover:underline"
-                                                >
-                                                    Terms of Use
-                                                </Link>
+                                                <Link href="/terms" className="text-indigo-600 hover:text-indigo-800 hover:underline">Terms of Use</Link>
                                             </FormLabel>
                                             <FormMessage className="text-red-500 text-xs" />
                                         </FormItem>
@@ -282,29 +318,13 @@ const SignUpForm = () => {
                                     <Button
                                         type="submit"
                                         className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold h-12 rounded-lg transition-all duration-200"
-                                        disabled={isLoading || !form.watch("termsAccepted")}
+                                        disabled={isLoading || isVerifyingEmail || !!emailError || !form.watch("termsAccepted")}
                                     >
                                         {isLoading ? (
                                             <span className="flex items-center gap-2">
-                                                <svg
-                                                    className="animate-spin h-5 w-5 text-white"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <circle
-                                                        className="opacity-25"
-                                                        cx="12"
-                                                        cy="12"
-                                                        r="10"
-                                                        stroke="currentColor"
-                                                        strokeWidth="4"
-                                                    />
-                                                    <path
-                                                        className="opacity-75"
-                                                        fill="currentColor"
-                                                        d="M4 12a8 8 0 018-8v8H4z"
-                                                    />
+                                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                                                 </svg>
                                                 Creating account...
                                             </span>
@@ -322,10 +342,7 @@ const SignUpForm = () => {
                     <CardFooter className="justify-center">
                         <p className="text-sm text-gray-500">
                             Already have an account?{" "}
-                            <Link
-                                href="/auth/signin"
-                                className="text-indigo-600 hover:text-indigo-800 hover:underline transition-all duration-200"
-                            >
+                            <Link href="/auth/signin" className="text-indigo-600 hover:text-indigo-800 hover:underline transition-all duration-200">
                                 Sign in
                             </Link>
                         </p>

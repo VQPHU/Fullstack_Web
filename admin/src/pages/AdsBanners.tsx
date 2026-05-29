@@ -331,7 +331,7 @@ const fetchProductTypes = async () => {
 
       {/* ===== ADD MODAL ===== */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] sm:max-h-[600px] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Ads Banner</DialogTitle>
             <DialogDescription>Create a new advertisement banner</DialogDescription>

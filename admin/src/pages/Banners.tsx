@@ -157,13 +157,21 @@ export default function BannersPage() {
 
     setFormLoading(true);
     try {
-      await axiosPrivate.put(`/banners/${selectedBanner._id}`, {
+      const response = await axiosPrivate.put(`/banners/${selectedBanner._id}`, {
         ...data,
         startFrom: Number(data.startFrom),
       });
+
+      const updatedBanner = response.data;
+      setSelectedBanner(updatedBanner);
+      setBanners((prev) =>
+        prev.map((banner) =>
+          banner._id === updatedBanner._id ? updatedBanner : banner
+        )
+      );
+
       toast("Banner updated successfully");
       setIsEditModalOpen(false);
-      fetchBanners();
     } catch (error) {
       console.log("Failed to update banner", error);
       toast("Failed to update banner");
@@ -404,7 +412,7 @@ export default function BannersPage() {
 
       {/* Edit Banner Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] sm:max-h-[600px] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Banner</DialogTitle>
             <DialogDescription>Update banner information</DialogDescription>

@@ -67,6 +67,14 @@ const updateUser = asyncHandler(async (req, res) => {
     }
     // Allow updates by the user themselves or admins 
     user.name = req.body.name || user.name;
+    if (req.body.email && req.body.email !== user.email) {
+        const emailExists = await User.findOne({ email: req.body.email });
+        if (emailExists) {
+            res.status(400);
+            throw new Error("Email already exists");
+        }
+        user.email = req.body.email;
+    }
     if (req.body.password) {
         user.password = req.body.password;
     }
@@ -163,7 +171,7 @@ const addAddress = asyncHandler(async (req, res) => {
         });
     } else {
         user.addresses.push({
-            street, 
+            street,
             city,
             country,
             postalCode,

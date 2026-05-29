@@ -98,6 +98,15 @@ const updateEmployee = asyncHandler(async (req, res) => {
         throw new Error("Employee not found");
     }
 
+    if (req.body.employeeId && req.body.employeeId !== employee.employeeId) {
+        const exists = await Employee.findOne({ employeeId: req.body.employeeId });
+        if (exists) {
+            res.status(400);
+            throw new Error("Employee ID already exists");
+        }
+        employee.employeeId = req.body.employeeId;
+    }
+
     employee.fullName = req.body.fullName || employee.fullName;
     employee.email = req.body.email || employee.email;
     employee.gender = req.body.gender || employee.gender;

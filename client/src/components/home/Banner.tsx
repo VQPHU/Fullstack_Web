@@ -7,7 +7,9 @@ import React from 'react'
 const Banner = async () => {
     let banners: Banners[] = [];
     try {
-        const data = await fetchData<Banners[]>("/banners");
+        const data = await fetchData<Banners[]>("/banners", {
+            next: { revalidate: 0 },
+        });
         banners = data;
     } catch (error) {
         console.log("error", error);
